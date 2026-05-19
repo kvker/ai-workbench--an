@@ -1,4 +1,5 @@
-import { mockSession } from './session'
+import { getStoredToken } from './authStorage'
+import { getWorkspaceUserId } from './session'
 
 const CODEX_API_BASE_URL = import.meta.env.VITE_CODEX_API_BASE_URL ?? 'http://localhost:3100'
 
@@ -95,11 +96,13 @@ async function request<T>(
   path: string,
   options: { method?: 'GET' | 'POST'; body?: unknown } = {},
 ): Promise<T> {
+  const token = getStoredToken()
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-workspace-user-id': mockSession.userId,
+      'x-workspace-user-id': getWorkspaceUserId(),
+      ...(token ? { token } : {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   })

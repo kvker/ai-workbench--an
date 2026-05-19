@@ -65,6 +65,12 @@ export function CodexConversationModule({
     let ignore = false
 
     async function startSession() {
+      if (!demandId || !workspaceId) {
+        setLoading(false)
+        setError('当前需求缺少 demandId 或 workspaceId，无法创建 AI 会话。请先完成需求工作区初始化。')
+        return
+      }
+
       setLoading(true)
       setError(null)
 
@@ -170,7 +176,7 @@ export function CodexConversationModule({
               variant="borderless"
               disabled={disabled || loading || !session}
               value={draft}
-              placeholder={loading ? '正在连接 Codex session...' : '输入消息...'}
+              placeholder={loading ? '正在连接 AI 会话...' : '输入消息...'}
               autoSize={{ minRows: 3, maxRows: 6 }}
               className="bg-transparent p-3 text-sm"
               onChange={(event) => setDraft(event.target.value)}
@@ -218,9 +224,9 @@ function CodexInitializingState({ isDark }: { isDark: boolean }) {
       <div className="grid max-w-[520px] justify-items-center gap-4 text-center">
         <Spin size="large" />
         <div>
-          <div className="text-base font-extrabold">正在连接 Codex session</div>
+          <div className="text-base font-extrabold">正在连接 AI 会话</div>
           <p className={`mt-2 text-sm leading-relaxed ${mutedText(isDark)}`}>
-            service 正在绑定当前需求工作区，并准备 Codex 对话上下文。
+            service 正在绑定当前需求工作区，并准备 AI 对话上下文。
           </p>
         </div>
       </div>
@@ -231,7 +237,7 @@ function CodexInitializingState({ isDark }: { isDark: boolean }) {
 function CodexErrorState({ error, isDark }: { error: string; isDark: boolean }) {
   return (
     <div className={`mb-4 rounded-lg border px-3 py-2 text-xs font-bold ${panel(isDark)}`}>
-      Codex service 不可用：{error}
+      AI service 不可用：{error}
     </div>
   )
 }
@@ -239,8 +245,8 @@ function CodexErrorState({ error, isDark }: { error: string; isDark: boolean }) 
 function CodexEmptyState({ isDark }: { isDark: boolean }) {
   return (
     <div className={`mb-4 rounded-lg border p-4 text-sm ${panel(isDark)}`}>
-      <div className="font-extrabold">Codex 对话已就绪</div>
-      <p className={`mt-2 leading-relaxed ${mutedText(isDark)}`}>当前模块通过 service:3100 创建 session，后续可在 service adapter 层切换真实 app-server。</p>
+      <div className="font-extrabold">AI 对话已就绪</div>
+      <p className={`mt-2 leading-relaxed ${mutedText(isDark)}`}>当前模块通过 service:3100 创建会话。</p>
     </div>
   )
 }
@@ -250,7 +256,7 @@ function CodexMessageBubble({ message, isDark }: { message: ConversationMessage;
 
   return (
     <div className={`mb-4 grid max-w-[860px] gap-3 ${isUser ? 'ml-auto grid-cols-[1fr_32px]' : 'grid-cols-[32px_1fr]'}`}>
-      {!isUser && <Avatar label="Codex" ai />}
+      {!isUser && <Avatar label="AI" ai />}
       <div className={`rounded-lg border p-3 text-sm leading-relaxed ${isUser ? toneClasses.blue : panel(isDark)}`}>
         <p>{message.text}</p>
       </div>
@@ -289,7 +295,7 @@ function CodexSessionRegion({ session, isDark }: { session: CodexSession | null;
   return (
     <aside className={`hidden min-h-0 border-l xl:grid xl:grid-rows-[auto_1fr] ${pageBand(isDark)}`}>
       <div className={`border-b p-3 ${dividerBorder(isDark)}`}>
-        <h2 className="text-sm font-extrabold">Codex session</h2>
+        <h2 className="text-sm font-extrabold">AI 会话</h2>
       </div>
       <div className="min-h-0 overflow-auto p-2">
         <div className={`rounded-lg border p-3 ${panelSoft(isDark)}`}>
