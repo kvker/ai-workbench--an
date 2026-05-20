@@ -104,6 +104,7 @@
 | [20260519__frontend-login-page](artifacts/20260519__frontend-login-page/) | 增加前端登录页并接入 devops 登录接口 | 已完成 |
 | [20260520__detail-raw-upload](artifacts/20260520__detail-raw-upload/) | 详情页增加上传原始需求与打开文档区入口 | 活跃 |
 | [20260520__app-style-polish](artifacts/20260520__app-style-polish/) | 优化前端样式、颜色搭配与 AntD 主题一致性 | 活跃 |
+| [20260520__detail-load-pm-skills](artifacts/20260520__detail-load-pm-skills/) | 请求详情页时按流程自动加载 PM skills 到需求工作区 | 活跃 |
 
 ## Skill 路由
 

@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
 const { readStore, updateStore } = require('../storage/jsonStore');
+const { syncPmSkillsForFlow } = require('../services/skillSyncService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
 const router = express.Router();
@@ -32,11 +33,15 @@ router.get('/:demandId', async (req, res, next) => {
     }
 
     const workspace = await ensureDemandWorkspace(currentTask.demand, resolveWorkspaceUserId(req));
+    const skillSync = await syncPmSkillsForFlow({
+      flowSteps: currentTask.flowSteps,
+      workspacePath: workspace.workspacePath,
+    });
     const shouldPersistWorkspace =
       currentTask.demand.branch !== workspace.branchName;
 
     if (!shouldPersistWorkspace) {
-      res.json(withWorkspace(currentTask, workspace));
+      res.json(withWorkspace(currentTask, workspace, skillSync));
       return;
     }
 
@@ -56,7 +61,7 @@ router.get('/:demandId', async (req, res, next) => {
       return;
     }
 
-    res.json(withWorkspace(task, workspace));
+    res.json(withWorkspace(task, workspace, skillSync));
   } catch (error) {
     next(error);
   }
@@ -153,7 +158,7 @@ router.post('/:demandId/document-region/open', async (req, res, next) => {
   }
 });
 
-function withWorkspace(task, workspace) {
+function withWorkspace(task, workspace, skillSync) {
   return {
     ...task,
     demand: {
@@ -162,6 +167,7 @@ function withWorkspace(task, workspace) {
       workspacePath: workspace.workspacePath,
       branch: workspace.branchName,
     },
+    skillSync,
   };
 }
 

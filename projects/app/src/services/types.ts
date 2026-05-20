@@ -16,6 +16,7 @@ export type Lane = {
 }
 
 export type FlowStep = {
+  sequence?: number
   title: string
   state: string
   status: 'done' | 'current' | 'locked'
@@ -70,6 +71,17 @@ export type WorkbenchMockData = {
     documents: DocumentSummary[]
     conversations: ConversationSummary[]
     codePreview: CodePreview
+    skillSync?: {
+      status: 'synced' | 'skipped' | 'partial'
+      reason?: string
+      copied: string[]
+      missing?: { name: string; sourcePath: string }[]
+      failed?: { name: string; message: string }[]
+      error?: string
+      sourceRoot?: string
+      sourceRootCandidates?: string[]
+      targetRoot?: string
+    }
   }
   tasksById?: Record<string, WorkbenchMockData['task']>
 }
