@@ -2,6 +2,7 @@ import { request } from './http'
 import type {
   CreateIssueInput,
   DevopsWorkspace,
+  DevopsWorkspaceProgress,
   HarnessStatus,
   HarnessIssueGroup,
   Issue,
@@ -60,8 +61,42 @@ export async function create(input: CreateIssueInput) {
   })
 }
 
+export async function updateHarnessStatus(issueId: number | string, harnessStatus: HarnessStatus) {
+  return request<boolean>('/issue/updateHarnessStatus', {
+    baseUrl: DEVOPS_API_BASE_URL,
+    body: {
+      issueId: Number(issueId),
+      harnessStatus,
+    },
+    method: 'PUT',
+  })
+}
+
 export async function listWorkspaces() {
   return request<DevopsWorkspace[]>('/ai/workspace/list', {
+    baseUrl: DEVOPS_API_BASE_URL,
+  })
+}
+
+export async function createWorkspace(input: { taskName: string; devopsIssueId: number; deployPlanIds?: number[] }) {
+  return request<number>('/ai/workspace/create', {
+    baseUrl: DEVOPS_API_BASE_URL,
+    body: {
+      deployPlanIds: [],
+      ...input,
+    },
+    method: 'POST',
+  })
+}
+
+export async function workspaceDetail(id: number | string) {
+  return request<DevopsWorkspace>(`/ai/workspace/detail?id=${encodeURIComponent(String(id))}`, {
+    baseUrl: DEVOPS_API_BASE_URL,
+  })
+}
+
+export async function workspaceProgress(id: number | string) {
+  return request<DevopsWorkspaceProgress>(`/ai/workspace/progress?id=${encodeURIComponent(String(id))}`, {
     baseUrl: DEVOPS_API_BASE_URL,
   })
 }
@@ -73,15 +108,52 @@ export async function findWorkspaceByIssueId(issueId: number | string) {
   return workspaces.find((workspace) => workspace.devopsIssueId === numericIssueId)
 }
 
+export async function ensureWorkspaceForIssue(issue: Issue) {
+  const existingWorkspace = await findWorkspaceByIssueId(issue.id)
+
+  if (existingWorkspace) {
+    return existingWorkspace
+  }
+
+  const workspaceId = await createWorkspace({
+    taskName: issue.issueName,
+    devopsIssueId: issue.id,
+  })
+
+  return waitForWorkspaceReady(workspaceId)
+}
+
+async function waitForWorkspaceReady(workspaceId: number) {
+  const maxAttempts = 20
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const progress = await workspaceProgress(workspaceId)
+
+    if (progress.status === 'ERROR') {
+      throw new Error(progress.errorMsg || '工作区创建失败')
+    }
+
+    if (progress.status === 'ACTIVE' || progress.status === 'DONE') {
+      return workspaceDetail(workspaceId)
+    }
+
+    await sleep(1000)
+  }
+
+  return workspaceDetail(workspaceId)
+}
+
+function sleep(duration: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, duration))
+}
+
 function toHarnessQueryString(query: IssueHarnessListQuery) {
   const params = new URLSearchParams()
 
-  appendListParam(params, 'harnessStatusList', query.harnessStatusList)
+  if (query.harnessStatusList && query.harnessStatusList.length > 0) {
+    params.set('harnessStatusList', query.harnessStatusList.join(','))
+  }
 
   const queryString = params.toString()
   return queryString ? `?${queryString}` : ''
-}
-
-function appendListParam(params: URLSearchParams, key: string, values: number[] | undefined) {
-  values?.forEach((value) => params.append(key, String(value)))
 }

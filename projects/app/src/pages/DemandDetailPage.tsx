@@ -6,7 +6,7 @@ import { PrimaryButton } from '../components/Button'
 import { Pill } from '../components/Pill'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
 import { useAppTheme } from '../providers/themeContext'
-import { issueService, taskService, type DocumentSummary, type FlowStep, type Issue, type IssueTask, type Tone } from '../services'
+import { issueService, taskService, type DocumentSummary, type FlowStep, type HarnessStatus, type Issue, type IssueTask, type Tone } from '../services'
 import { mutedText, pageBand, panel } from '../utils/themeClasses'
 
 const emptyIssue: Issue = {
@@ -21,12 +21,14 @@ const emptyIssue: Issue = {
 export function DemandDetailPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
+  const [isUpdatingHarnessStatus, setIsUpdatingHarnessStatus] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const rawInputRef = useRef<HTMLInputElement>(null)
   const { demandId = '' } = useParams()
   const { isDark } = useAppTheme()
   const [messageApi, contextHolder] = message.useMessage()
   const loadTask = useCallback(() => loadIssueTask(demandId), [demandId])
-  const { data: task, error, loading } = useIssueTask(loadTask)
+  const { data: task, error, loading } = useIssueTask(loadTask, reloadKey)
   const { issue, workspace, flowSteps, documents } = task
   const currentFlowStepIndex = Math.max(
     0,
@@ -36,6 +38,23 @@ export function DemandDetailPage() {
   const branch = workspace?.branchName || issue.wsBranchName || `task-${issue.id}`
   const workspaceId = workspace ? String(workspace.id) : ''
   const openRawInputPicker = () => rawInputRef.current?.click()
+  const updateHarnessStatus = async (harnessStatus: HarnessStatus) => {
+    if (!issue.id) {
+      return
+    }
+
+    setIsUpdatingHarnessStatus(true)
+
+    try {
+      await issueService.updateHarnessStatus(issue.id, harnessStatus)
+      messageApi.success('流程状态已更新')
+      setReloadKey((value) => value + 1)
+    } catch (updateError) {
+      messageApi.error(updateError instanceof Error ? updateError.message : '流程状态更新失败')
+    } finally {
+      setIsUpdatingHarnessStatus(false)
+    }
+  }
   const openDocumentRegion = async () => {
     Modal.info({
       title: '打开文档区',
@@ -115,7 +134,14 @@ export function DemandDetailPage() {
           onOpenDocumentRegion={openDocumentRegion}
           onUploadRawInput={openRawInputPicker}
         />
-        <WorkflowRegion currentFlowStepIndex={currentFlowStepIndex} flowSteps={flowSteps} isDark={isDark} />
+        <WorkflowRegion
+          currentFlowStepIndex={currentFlowStepIndex}
+          flowSteps={flowSteps}
+          issue={issue}
+          isDark={isDark}
+          isUpdatingHarnessStatus={isUpdatingHarnessStatus}
+          onUpdateHarnessStatus={updateHarnessStatus}
+        />
         <ArtifactRegion documents={documents} isDark={isDark} />
       </aside>
 
@@ -189,29 +215,134 @@ function DemandInfoRegion({
 function WorkflowRegion({
   currentFlowStepIndex,
   flowSteps,
+  issue,
   isDark,
+  isUpdatingHarnessStatus,
+  onUpdateHarnessStatus,
 }: {
   currentFlowStepIndex: number
   flowSteps: FlowStep[]
+  issue: Issue
   isDark: boolean
+  isUpdatingHarnessStatus: boolean
+  onUpdateHarnessStatus: (harnessStatus: HarnessStatus) => void
 }) {
+  const stepsScrollRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = stepsScrollRef.current
+    const currentStep = container?.querySelectorAll('.ant-steps-item')[currentFlowStepIndex]
+
+    if (!currentStep) {
+      return
+    }
+
+    currentStep.scrollIntoView({
+      block: 'center',
+      behavior: 'smooth',
+    })
+  }, [currentFlowStepIndex, flowSteps.length])
+
   // Region: 流程区
   return (
     <section className={`grid h-[316px] grid-rows-[auto_minmax(0,1fr)] rounded-lg border p-3 ${panel(isDark)}`}>
-      <PanelHead title="流程区" />
-      <div className="min-h-0 overflow-y-auto pr-1">
+      <PanelHead
+        title="流程区"
+      />
+      <div ref={stepsScrollRef} className="min-h-0 overflow-y-auto pr-1">
         <Steps
-          direction="vertical"
+          orientation="vertical"
           current={currentFlowStepIndex}
           className="mt-3"
-          items={flowSteps.map((step) => ({
-            title: step.title,
-            description: step.state,
+          items={flowSteps.map((step, index) => ({
+            title: (
+              <WorkflowStepTitle
+                currentFlowStepIndex={currentFlowStepIndex}
+                disabled={!issue.id || isUpdatingHarnessStatus}
+                index={index}
+                step={step}
+                onUpdateHarnessStatus={onUpdateHarnessStatus}
+              />
+            ),
+            content: step.state,
             status: step.status === 'done' ? 'finish' : step.status === 'current' ? 'process' : 'wait',
           }))}
         />
       </div>
     </section>
+  )
+}
+
+function WorkflowStepTitle({
+  currentFlowStepIndex,
+  disabled,
+  index,
+  step,
+  onUpdateHarnessStatus,
+}: {
+  currentFlowStepIndex: number
+  disabled: boolean
+  index: number
+  step: FlowStep
+  onUpdateHarnessStatus: (harnessStatus: HarnessStatus) => void
+}) {
+  const targetStatus = step.harnessStatus
+  const isCurrent = index === currentFlowStepIndex
+  const isPrevious = index < currentFlowStepIndex
+  const nextStatus = issueService.allHarnessStatuses[index + 1]
+  const canComplete = isCurrent && nextStatus !== undefined
+  const canSwitchBack = isPrevious && targetStatus !== undefined
+  const confirmComplete = () => {
+    Modal.confirm({
+      title: `确认完成「${step.title}」？`,
+      content: nextStatus === undefined ? undefined : `完成后流程会进入「${issueService.harnessStatusTitles[nextStatus]}」。`,
+      okText: '完成',
+      cancelText: '取消',
+      async onOk() {
+        // TODO: 完成当前流程状态前需要执行自检；当前仅切换状态，后续接入自检结果后再允许推进。
+        onUpdateHarnessStatus(nextStatus)
+      },
+    })
+  }
+  const confirmSwitchBack = () => {
+    if (targetStatus === undefined) {
+      return
+    }
+
+    Modal.confirm({
+      title: `确认切换回「${step.title}」？`,
+      content: '切换后当前流程状态会回退到该节点。',
+      okText: '切换',
+      cancelText: '取消',
+      onOk() {
+        onUpdateHarnessStatus(targetStatus)
+      },
+    })
+  }
+
+  return (
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+      <span className="truncate text-sm font-extrabold">{step.title}</span>
+      {canComplete && (
+        <Button
+          size="small"
+          type="primary"
+          loading={disabled}
+          onClick={confirmComplete}
+        >
+          完成
+        </Button>
+      )}
+      {canSwitchBack && (
+        <Button
+          size="small"
+          disabled={disabled}
+          onClick={confirmSwitchBack}
+        >
+          切换
+        </Button>
+      )}
+    </div>
   )
 }
 
@@ -287,16 +418,16 @@ function QuickDoc({ title, body, tone }: { title: string; body: string; tone: To
   )
 }
 
-function PanelHead({ title, action }: { title: string; action?: string }) {
+function PanelHead({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <h2 className="text-sm font-extrabold">{title}</h2>
-      {action && <Pill tone={action.includes('docs') ? 'cyan' : 'default'}>{action}</Pill>}
+      {typeof action === 'string' ? <Pill tone={action.includes('docs') ? 'cyan' : 'default'}>{action}</Pill> : action}
     </div>
   )
 }
 
-function useIssueTask(loader: () => Promise<IssueTask>) {
+function useIssueTask(loader: () => Promise<IssueTask>, reloadKey: number) {
   const [data, setData] = useState<IssueTask>(() => ({
     issue: emptyIssue,
     flowSteps: createFlowSteps(emptyIssue),
@@ -327,7 +458,7 @@ function useIssueTask(loader: () => Promise<IssueTask>) {
     return () => {
       active = false
     }
-  }, [loader])
+  }, [loader, reloadKey])
 
   return { data, error, loading }
 }
@@ -336,7 +467,7 @@ async function loadIssueTask(issueId: string): Promise<IssueTask> {
   const issue = await issueService.detail(issueId)
   const [boardResult, workspaceResult] = await Promise.allSettled([
     issueService.issueBoard(issueId),
-    issueService.findWorkspaceByIssueId(issueId),
+    issueService.ensureWorkspaceForIssue(issue),
   ])
   const board = boardResult.status === 'fulfilled' && boardResult.value.id ? boardResult.value : undefined
   const workspace = workspaceResult.status === 'fulfilled' ? workspaceResult.value : undefined
@@ -363,6 +494,7 @@ function createFlowStep(targetStatus: number, title: string, currentStatus: numb
 
   return {
     sequence: targetStatus,
+    harnessStatus: targetStatus as HarnessStatus,
     title,
     state: current ? '当前状态' : done ? '已完成' : '未开始',
     status: current ? 'current' : done ? 'done' : 'locked',

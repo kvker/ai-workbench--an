@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Badge, Form, Input, Modal, Radio, Segmented, Select } from 'antd'
+import { Alert, Badge, Card, Empty, Form, Input, Modal, Radio, Segmented, Select, Spin, Typography } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 import { CREATE_DEMAND_EVENT } from '../components/Topbar'
 import { useAppTheme } from '../providers/themeContext'
 import { authService, issueService, userService, type CreateIssueInput, type HarnessIssueGroup, type Issue, type UserBaseInfo } from '../services'
-import { mutedText, pageBand, panel } from '../utils/themeClasses'
+import { pageBand } from '../utils/themeClasses'
 
 const defaultHarnessGroups: HarnessIssueGroup[] = []
 
@@ -187,13 +187,11 @@ function DemandBoardContent({
   return (
     <div className={`min-h-0 overflow-auto p-3 ${isDark ? 'bg-slate-950/60' : 'bg-slate-100'}`}>
       {loading ? (
-        <div className={`grid min-h-[360px] place-items-center rounded-lg border text-sm font-bold ${panel(isDark)}`}>
-          正在加载需求数据...
+        <div className="grid min-h-[360px] place-items-center">
+          <Spin description="正在加载需求数据..." />
         </div>
       ) : error ? (
-        <div className={`grid min-h-[360px] place-items-center rounded-lg border px-4 text-center text-sm font-bold ${panel(isDark)}`}>
-          <span>需求数据加载失败：{error}</span>
-        </div>
+        <Alert showIcon type="error" message="需求数据加载失败" description={error} />
       ) : (
         <IssueLaneGrid groups={groups} isDark={isDark} />
       )}
@@ -205,43 +203,54 @@ function IssueLaneGrid({ groups, isDark }: { groups: HarnessIssueGroup[]; isDark
   return (
     <div className="grid auto-cols-[320px] grid-flow-col gap-3">
       {groups.map((group) => (
-        <section
+        <Card
           key={group.harnessStatus}
-          className={`grid min-h-[640px] grid-rows-[auto_1fr] overflow-hidden rounded-lg border ${
-            isDark ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white'
-          }`}
+          title={<span className="text-sm font-extrabold">{group.harnessStatusDesc || issueService.harnessStatusTitles[group.harnessStatus]}</span>}
+          extra={<Badge count={group.issues.length} color="#4f46e5" />}
+          className="h-[640px] overflow-hidden"
+          styles={{
+            body: {
+              height: 584,
+              overflowY: 'auto',
+              padding: 8,
+              background: isDark ? 'rgba(15, 23, 42, 0.36)' : '#f8fafc',
+            },
+            header: {
+              minHeight: 56,
+            },
+          }}
         >
-          <header className={`flex min-h-14 items-center justify-between gap-2 border-b px-3 ${pageBand(isDark)}`}>
-            <h2 className="text-sm font-extrabold">{group.harnessStatusDesc || issueService.harnessStatusTitles[group.harnessStatus]}</h2>
-            <Badge count={group.issues.length} color="#4f46e5" />
-          </header>
-          <div className="min-h-0 overflow-auto p-2">
+          <div className="grid gap-2">
             {group.issues.length > 0 ? (
               group.issues.map((issue) => (
-                <IssueCard key={issue.id} issue={issue} isDark={isDark} />
+                <IssueCard key={issue.id} issue={issue} />
               ))
             ) : (
-              <div className={`grid min-h-24 place-items-center rounded-lg border border-dashed px-3 text-center text-xs font-bold ${mutedText(isDark)}`}>
-                暂无需求
-              </div>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无需求" />
             )}
           </div>
-        </section>
+        </Card>
       ))}
     </div>
   )
 }
 
-function IssueCard({ issue, isDark }: { issue: Issue; isDark: boolean }) {
+function IssueCard({ issue }: { issue: Issue }) {
   return (
     <Link
       to={`/demands/${issue.id}`}
-      className={`mb-2 block w-full rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] ${panel(isDark)}`}
+      className="block text-inherit transition hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
     >
-      <div className="text-sm font-extrabold leading-snug">{issue.issueName}</div>
-      <p className={`mt-2 line-clamp-2 text-xs leading-relaxed ${mutedText(isDark)}`}>
-        {issue.remark || issue.prd || issue.requireDetailUrl || '暂无需求详情'}
-      </p>
+      <Card size="small" hoverable>
+        <Typography.Text strong>{issue.issueName}</Typography.Text>
+        <Typography.Paragraph
+          className="!mb-0 !mt-2 text-xs"
+          type="secondary"
+          ellipsis={{ rows: 2 }}
+        >
+          {issue.remark || issue.prd || issue.requireDetailUrl || '暂无需求详情'}
+        </Typography.Paragraph>
+      </Card>
     </Link>
   )
 }

@@ -5,6 +5,7 @@ export type FlowStep = {
   title: string
   state: string
   status: 'done' | 'current' | 'locked'
+  harnessStatus?: HarnessStatus
 }
 
 export type DocumentSummary = {
@@ -135,6 +136,15 @@ export type DevopsWorkspace = {
   createdAt?: string
   lastActiveAt?: string
   repoCount?: number
+}
+
+export type DevopsWorkspaceProgress = {
+  workspaceId?: number
+  status?: 'CREATING' | 'ACTIVE' | 'ERROR' | 'DONE'
+  currentStep?: number
+  totalSteps?: number
+  stepName?: string
+  errorMsg?: string
 }
 
 export type IssueTask = {
