@@ -115,6 +115,7 @@ export type CreateIssueInput = {
   issueType: IssueType
   issueSource: IssueSource
   remark?: string
+  requireDetailUrl?: string
   assignedUser: string
   stakeholders?: string[]
   isHarness?: boolean

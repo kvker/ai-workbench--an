@@ -32,6 +32,8 @@ export const harnessStatusTitles: Record<HarnessStatus, string> = {
   9: '归档',
 }
 
+export const allHarnessStatuses: HarnessStatus[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
 export async function listMyHarness(query: IssueHarnessListQuery = {}) {
   return request<HarnessIssueGroup[]>(`/issue/listMyHarness${toHarnessQueryString(query)}`, {
     baseUrl: DEVOPS_API_BASE_URL,

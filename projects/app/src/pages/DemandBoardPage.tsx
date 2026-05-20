@@ -30,7 +30,9 @@ export function DemandBoardPage() {
     setLoading(true)
 
     try {
-      const nextGroups = await issueService.listMyHarness()
+      const nextGroups = await issueService.listMyHarness({
+        harnessStatusList: issueService.allHarnessStatuses,
+      })
       setGroups(nextGroups ?? defaultHarnessGroups)
       setError(null)
     } catch (reason) {
@@ -68,28 +70,27 @@ export function DemandBoardPage() {
 
   const visibleGroups = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
-    const nextGroups = groups.map((group) => ({
-      ...group,
-      issues: group.issues.filter((issue) => {
-        const matchesKeyword = !normalizedKeyword || issue.issueName.toLowerCase().includes(normalizedKeyword)
-        const matchesScope =
-          scope === '我的负责'
-            ? issue.assignedUser === currentUserName
-            : scope === '我跟进的'
-              ? issue.stakeholders?.includes(currentUserName ?? '')
-              : true
+    return issueService.allHarnessStatuses.map((status) => {
+      const group = groups.find((item) => item.harnessStatus === status)
+      const issues = group?.issues ?? []
 
-        return matchesKeyword && matchesScope
-      }),
-    }))
+      return {
+        harnessStatus: status,
+        harnessStatusDesc: group?.harnessStatusDesc || issueService.harnessStatusTitles[status],
+        issues: issues.filter((issue) => {
+          const matchesKeyword = !normalizedKeyword || issue.issueName.toLowerCase().includes(normalizedKeyword)
+          const matchesScope =
+            scope === '我的负责'
+              ? issue.assignedUser === currentUserName
+              : scope === '我跟进的'
+                ? issue.stakeholders?.includes(currentUserName ?? '')
+                : true
 
-    return nextGroups.filter((group) => group.issues.length > 0)
+          return matchesKeyword && matchesScope
+        }),
+      }
+    })
   }, [currentUserName, groups, keyword, scope])
-
-  const visibleIssueCount = useMemo(
-    () => visibleGroups.reduce((total, group) => total + group.issues.length, 0),
-    [visibleGroups],
-  )
 
   async function handleCreateIssue(values: CreateIssueInput) {
     setIsCreating(true)
@@ -97,6 +98,7 @@ export function DemandBoardPage() {
     try {
       await issueService.create({
         ...values,
+        requireDetailUrl: 'https://www.baidu.com',
         stakeholders: values.stakeholders ?? [],
         isHarness: true,
       })
@@ -121,7 +123,6 @@ export function DemandBoardPage() {
         error={error}
         groups={visibleGroups}
         isDark={isDark}
-        issueCount={visibleIssueCount}
         loading={loading}
       />
       <CreateIssueDialog
@@ -176,13 +177,11 @@ function DemandBoardContent({
   error,
   groups,
   isDark,
-  issueCount,
   loading,
 }: {
   error: string | null
   groups: HarnessIssueGroup[]
   isDark: boolean
-  issueCount: number
   loading: boolean
 }) {
   return (
@@ -195,13 +194,6 @@ function DemandBoardContent({
         <div className={`grid min-h-[360px] place-items-center rounded-lg border px-4 text-center text-sm font-bold ${panel(isDark)}`}>
           <span>需求数据加载失败：{error}</span>
         </div>
-      ) : issueCount === 0 ? (
-        <div className={`grid min-h-[360px] place-items-center rounded-lg border px-4 text-center ${panel(isDark)}`}>
-          <div>
-            <div className="text-sm font-extrabold">暂无需求</div>
-            <p className={`mt-2 text-xs ${mutedText(isDark)}`}>当前没有可展示的 DevOps 需求。</p>
-          </div>
-        </div>
       ) : (
         <IssueLaneGrid groups={groups} isDark={isDark} />
       )}
@@ -211,7 +203,7 @@ function DemandBoardContent({
 
 function IssueLaneGrid({ groups, isDark }: { groups: HarnessIssueGroup[]; isDark: boolean }) {
   return (
-    <div className="grid min-w-[1440px] grid-cols-10 gap-3">
+    <div className="grid auto-cols-[320px] grid-flow-col gap-3">
       {groups.map((group) => (
         <section
           key={group.harnessStatus}
@@ -224,9 +216,15 @@ function IssueLaneGrid({ groups, isDark }: { groups: HarnessIssueGroup[]; isDark
             <Badge count={group.issues.length} color="#4f46e5" />
           </header>
           <div className="min-h-0 overflow-auto p-2">
-            {group.issues.map((issue) => (
-              <IssueCard key={issue.id} issue={issue} isDark={isDark} />
-            ))}
+            {group.issues.length > 0 ? (
+              group.issues.map((issue) => (
+                <IssueCard key={issue.id} issue={issue} isDark={isDark} />
+              ))
+            ) : (
+              <div className={`grid min-h-24 place-items-center rounded-lg border border-dashed px-3 text-center text-xs font-bold ${mutedText(isDark)}`}>
+                暂无需求
+              </div>
+            )}
           </div>
         </section>
       ))}
@@ -241,13 +239,9 @@ function IssueCard({ issue, isDark }: { issue: Issue; isDark: boolean }) {
       className={`mb-2 block w-full rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] ${panel(isDark)}`}
     >
       <div className="text-sm font-extrabold leading-snug">{issue.issueName}</div>
-      <p className={`mt-2 line-clamp-3 text-xs leading-relaxed ${mutedText(isDark)}`}>
+      <p className={`mt-2 line-clamp-2 text-xs leading-relaxed ${mutedText(isDark)}`}>
         {issue.remark || issue.prd || issue.requireDetailUrl || '暂无需求详情'}
       </p>
-      <div className={`mt-3 flex flex-wrap gap-2 text-[11px] font-bold ${mutedText(isDark)}`}>
-        <span>{issue.harnessStatusDesc}</span>
-        <span>{issue.assignedUserName || issue.assignedUser || '未指派'}</span>
-      </div>
     </Link>
   )
 }
