@@ -25,6 +25,7 @@ export type CodexConversationModuleProps = {
   threadId?: string
   apiBaseUrl?: string
   disabled?: boolean
+  initializationError?: string
   isDark: boolean
   onThreadChange?: (threadId: string) => void
   onError?: (error: Error) => void
@@ -44,6 +45,7 @@ export function CodexConversationModule({
   branch,
   demandId,
   disabled,
+  initializationError,
   isDark,
   onError,
   onThreadChange,
@@ -75,6 +77,12 @@ export function CodexConversationModule({
     let ignore = false
 
     async function startSession() {
+      if (disabled) {
+        setLoading(false)
+        setError(initializationError ?? null)
+        return
+      }
+
       if (!demandId || !workspaceId) {
         setLoading(false)
         setError('当前需求缺少 demandId 或 workspaceId，无法创建 AI 会话。请先完成需求工作区初始化。')
@@ -130,7 +138,7 @@ export function CodexConversationModule({
     return () => {
       ignore = true
     }
-  }, [apiBaseUrl, branch, demandId, handleError, onThreadChange, threadId, workspaceId, workspacePath])
+  }, [apiBaseUrl, branch, demandId, disabled, handleError, initializationError, onThreadChange, threadId, workspaceId, workspacePath])
 
   useEffect(() => {
     if (!session || (session.status !== 'running' && Date.now() > pollUntil)) {
@@ -268,6 +276,11 @@ export function CodexConversationModule({
   }
 
   async function handleCreateSession() {
+    if (disabled) {
+      setError(initializationError ?? '需求工作区正在初始化，暂时无法创建 AI 会话。')
+      return
+    }
+
     if (!demandId || !workspaceId) {
       setError('当前需求缺少 demandId 或 workspaceId，无法创建 AI 会话。请先完成需求工作区初始化。')
       return
@@ -371,6 +384,7 @@ export function CodexConversationModule({
       <CodexSessionRegion
         activeSessionId={session?.id}
         apiBaseUrl={apiBaseUrl}
+        disabled={disabled}
         isDark={isDark}
         sessions={sessions}
         onRename={(renamedSession) => {
@@ -532,6 +546,7 @@ function CodexCommandPanel({ outputs, isDark }: { outputs: CodexConversationEven
 function CodexSessionRegion({
   activeSessionId,
   apiBaseUrl,
+  disabled,
   isDark,
   onRename,
   onCreateSession,
@@ -540,6 +555,7 @@ function CodexSessionRegion({
 }: {
   activeSessionId?: string
   apiBaseUrl?: string
+  disabled?: boolean
   isDark: boolean
   onRename: (session: CodexSession) => void
   onCreateSession: () => void
@@ -551,7 +567,7 @@ function CodexSessionRegion({
     <aside className={`hidden min-h-0 border-l xl:grid xl:grid-rows-[auto_1fr] ${pageBand(isDark)}`}>
       <div className={`flex items-center justify-between gap-3 border-b p-3 ${dividerBorder(isDark)}`}>
         <h2 className="text-sm font-extrabold">AI 会话</h2>
-        <IconButton label="新增会话" onClick={onCreateSession}>+</IconButton>
+        <IconButton disabled={disabled} label="新增会话" onClick={onCreateSession}>+</IconButton>
       </div>
       <div className="min-h-0 overflow-auto p-2">
         {sessions.map((session) => (

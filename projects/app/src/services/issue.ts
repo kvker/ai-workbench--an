@@ -1,8 +1,6 @@
 import { request } from './http'
 import type {
   CreateIssueInput,
-  DevopsWorkspace,
-  DevopsWorkspaceProgress,
   HarnessStatus,
   HarnessIssueGroup,
   Issue,
@@ -70,81 +68,6 @@ export async function updateHarnessStatus(issueId: number | string, harnessStatu
     },
     method: 'PUT',
   })
-}
-
-export async function listWorkspaces() {
-  return request<DevopsWorkspace[]>('/ai/workspace/list', {
-    baseUrl: DEVOPS_API_BASE_URL,
-  })
-}
-
-export async function createWorkspace(input: { taskName: string; devopsIssueId: number; deployPlanIds?: number[] }) {
-  return request<number>('/ai/workspace/create', {
-    baseUrl: DEVOPS_API_BASE_URL,
-    body: {
-      deployPlanIds: [],
-      ...input,
-    },
-    method: 'POST',
-  })
-}
-
-export async function workspaceDetail(id: number | string) {
-  return request<DevopsWorkspace>(`/ai/workspace/detail?id=${encodeURIComponent(String(id))}`, {
-    baseUrl: DEVOPS_API_BASE_URL,
-  })
-}
-
-export async function workspaceProgress(id: number | string) {
-  return request<DevopsWorkspaceProgress>(`/ai/workspace/progress?id=${encodeURIComponent(String(id))}`, {
-    baseUrl: DEVOPS_API_BASE_URL,
-  })
-}
-
-export async function findWorkspaceByIssueId(issueId: number | string) {
-  const numericIssueId = Number(issueId)
-  const workspaces = await listWorkspaces()
-
-  return workspaces.find((workspace) => workspace.devopsIssueId === numericIssueId)
-}
-
-export async function ensureWorkspaceForIssue(issue: Issue) {
-  const existingWorkspace = await findWorkspaceByIssueId(issue.id)
-
-  if (existingWorkspace) {
-    return existingWorkspace
-  }
-
-  const workspaceId = await createWorkspace({
-    taskName: issue.issueName,
-    devopsIssueId: issue.id,
-  })
-
-  return waitForWorkspaceReady(workspaceId)
-}
-
-async function waitForWorkspaceReady(workspaceId: number) {
-  const maxAttempts = 20
-
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const progress = await workspaceProgress(workspaceId)
-
-    if (progress.status === 'ERROR') {
-      throw new Error(progress.errorMsg || '工作区创建失败')
-    }
-
-    if (progress.status === 'ACTIVE' || progress.status === 'DONE') {
-      return workspaceDetail(workspaceId)
-    }
-
-    await sleep(1000)
-  }
-
-  return workspaceDetail(workspaceId)
-}
-
-function sleep(duration: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, duration))
 }
 
 function toHarnessQueryString(query: IssueHarnessListQuery) {

@@ -60,10 +60,12 @@ export function NavButton({ children, to }: { children: ReactNode; to: string })
 
 export function IconButton({
   children,
+  disabled,
   label,
   onClick,
 }: {
   children: ReactNode
+  disabled?: boolean
   label: string
   onClick?: () => void
 }) {
@@ -71,6 +73,7 @@ export function IconButton({
     <Button
       title={label}
       aria-label={label}
+      disabled={disabled}
       onClick={onClick}
       className="grid size-8 place-items-center text-xs font-extrabold"
     >

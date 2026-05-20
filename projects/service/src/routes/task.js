@@ -12,6 +12,16 @@ const ZIP_BODY_LIMIT = '100mb';
 const RAW_INPUT_OVERWRITE_FILES = [];
 const execFileAsync = promisify(execFile);
 
+router.post('/:issueId/workspace/ensure', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+
+    res.json(toWorkspaceResponse(workspace));
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/:issueId/raw-input', express.raw({ type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'], limit: ZIP_BODY_LIMIT }), async (req, res, next) => {
   try {
     const fileName = sanitizeZipFileName(req.query.fileName);
@@ -99,6 +109,15 @@ async function prepareIssueWorkspace(req) {
   });
 
   return workspace;
+}
+
+function toWorkspaceResponse(workspace) {
+  return {
+    id: workspace.workspaceFolder,
+    branchName: workspace.branchName,
+    workspaceFolder: workspace.workspaceFolder,
+    workspacePath: workspace.workspacePath,
+  };
 }
 
 function sanitizeZipFileName(fileName) {

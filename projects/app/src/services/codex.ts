@@ -1,5 +1,5 @@
 import { getStoredToken } from './authStorage'
-import { getWorkspaceUserId } from './session'
+import { getWorkspaceUserKey } from './session'
 
 const CODEX_API_BASE_URL = import.meta.env.VITE_CODEX_API_BASE_URL ?? 'http://localhost:3100'
 
@@ -143,7 +143,7 @@ async function request<T>(
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-workspace-user-id': getWorkspaceUserId(),
+      'x-workspace-user': getWorkspaceUserKey(),
       ...(token ? { token } : {}),
     },
     body: options.body ? JSON.stringify(options.body) : undefined,

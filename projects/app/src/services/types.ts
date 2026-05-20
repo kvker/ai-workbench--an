@@ -122,35 +122,18 @@ export type CreateIssueInput = {
   isHarness?: boolean
 }
 
-export type DevopsWorkspace = {
-  id: number
-  taskName: string
+export type LocalWorkspace = {
+  id: string
   branchName?: string
+  workspaceFolder?: string
   workspacePath?: string
-  userName?: string
-  repositories?: string
-  opencodeSession?: string
-  devopsIssueId?: number
-  status?: number
-  statusDesc?: string
-  createdAt?: string
-  lastActiveAt?: string
-  repoCount?: number
-}
-
-export type DevopsWorkspaceProgress = {
-  workspaceId?: number
-  status?: 'CREATING' | 'ACTIVE' | 'ERROR' | 'DONE'
-  currentStep?: number
-  totalSteps?: number
-  stepName?: string
-  errorMsg?: string
 }
 
 export type IssueTask = {
   issue: Issue
   board?: IssueBoard
-  workspace?: DevopsWorkspace
+  workspace?: LocalWorkspace
+  workspaceError?: string
   flowSteps: FlowStep[]
   documents: DocumentSummary[]
 }

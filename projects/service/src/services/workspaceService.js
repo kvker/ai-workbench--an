@@ -70,7 +70,7 @@ async function withWorkspaceLock(branchName, task) {
 }
 
 function resolveWorkspaceUserId(req) {
-  const requestedUserId = req.headers['x-workspace-user-id'] || req.query.userId || req.headers['x-workspace-user'] || req.query.user;
+  const requestedUserId = req.headers['x-workspace-user'] || req.query.user || req.headers['x-workspace-user-id'] || req.query.userId;
   return sanitizeWorkspaceUserId(Array.isArray(requestedUserId) ? requestedUserId[0] : requestedUserId);
 }
 

@@ -29,7 +29,7 @@ export function DemandDetailPage() {
   const [messageApi, contextHolder] = message.useMessage()
   const loadTask = useCallback(() => loadIssueTask(demandId), [demandId])
   const { data: task, error, loading } = useIssueTask(loadTask, reloadKey)
-  const { issue, workspace, flowSteps, documents } = task
+  const { issue, workspace, workspaceError, flowSteps, documents } = task
   const currentFlowStepIndex = Math.max(
     0,
     flowSteps.findIndex((step) => step.status === 'current'),
@@ -150,6 +150,7 @@ export function DemandDetailPage() {
         demandId={String(issue.id)}
         disabled={loading || !workspaceId}
         isDark={isDark}
+        initializationError={workspaceError}
         workspaceId={workspaceId}
         workspacePath={workspace?.workspacePath}
       />
@@ -467,16 +468,22 @@ async function loadIssueTask(issueId: string): Promise<IssueTask> {
   const issue = await issueService.detail(issueId)
   const [boardResult, workspaceResult] = await Promise.allSettled([
     issueService.issueBoard(issueId),
-    issueService.ensureWorkspaceForIssue(issue),
+    taskService.ensureWorkspace(issue),
   ])
   const board = boardResult.status === 'fulfilled' && boardResult.value.id ? boardResult.value : undefined
   const workspace = workspaceResult.status === 'fulfilled' ? workspaceResult.value : undefined
+  const workspaceError = workspaceResult.status === 'rejected'
+    ? workspaceResult.reason instanceof Error
+      ? workspaceResult.reason.message
+      : '需求工作区初始化失败'
+    : undefined
   const displayIssue = board ? { ...issue, ...board } : issue
 
   return {
     issue: displayIssue,
     board,
     workspace,
+    workspaceError,
     flowSteps: createFlowSteps(displayIssue),
     documents: createDocuments(displayIssue),
   }

@@ -13,8 +13,8 @@
 
 | 项 | 当前实现 | 影响范围 | 真实接入方案 | 状态 |
 |----|----------|----------|--------------|------|
-| 前端登录态 | `projects/app/src/services/auth.ts` 已接入 devops 登录并保存 token；`projects/app/src/services/session.ts` 中 `mockSession.userId = user-zweizhao` 仍用于工作区 service 的 `x-workspace-user-id` | devops 请求使用真实 token；工作区 service 请求仍带 mock user id | service 校验登录 token 或 session，从可信身份中解析 user id；前端不再直接声明工作区用户 | 部分替换 |
-| 工作区用户身份 header | 前端通过 `x-workspace-user-id` 传 user id；service 在 `resolveWorkspaceUserId(req)` 中解析 | 需求工程目录命名为 `task-[hash]--[userId]` | service 校验登录 token 或 session，从可信身份中解析 user id；前端不再直接声明工作区用户 | 待替换 |
+| 前端登录态 | `projects/app/src/services/auth.ts` 已接入 devops 登录并保存 token；`projects/app/src/services/session.ts` 中 `mockSession.userName = zweizhao` 仍用于工作区 service 的 `x-workspace-user` 兜底 | devops 请求使用真实 token；工作区 service 请求仍带前端声明的用户名 | service 校验登录 token 或 session，从可信身份中解析用户标识；前端不再直接声明工作区用户 | 部分替换 |
+| 工作区用户身份 header | 前端通过 `x-workspace-user` 优先传 `userName/realName/displayName`；service 在 `resolveWorkspaceUserId(req)` 中解析，并兼容旧 `x-workspace-user-id` | 需求工程目录命名为 `task-[hash]--[username]` | service 校验登录 token 或 session，从可信身份中解析用户标识；前端不再直接声明工作区用户 | 待替换 |
 | service CORS 全放行 | `projects/service/app.js` 设置 `Access-Control-Allow-Origin: *`，预检请求头按浏览器请求动态放行 | 一期内网原型所有前端来源均可调用 service | 正式环境按部署域名、认证方式和凭证策略收紧 CORS | 待收紧 |
 | 本地 JSON 过程数据 | 已删除 `projects/service/data/workbench.json`、`jsonStore`、`/api/workspace` 与旧 `/api/task` 工作台数据接口；需求列表、详情、创建改为 devops `IssueController` | 需求列表与详情页数据 | 以 devops 业务接口为准；本地 service 仅保留 Native 能力 | 已替换 |
 | 前端内置 fallback 数据 | 已删除 `projects/app/src/services/mock.json` 与 `mockData`；首页和详情页直接请求 devops issue 接口 | service 不可用时页面不再显示原型数据 | 真实环境不使用前端内置业务假数据 | 已替换 |
@@ -28,7 +28,7 @@
 
 ## 已知注意事项
 
-- 用户目录应使用稳定 user id，不使用 display name 或可变用户名。
+- 用户目录当前优先使用可读用户名，便于本地识别；若用户名缺失才回退到 user id。
 - 工作区目录是服务端文件系统边界，真实接入后不得信任前端传入的用户身份。
 - 一期内网原型阶段 service CORS 全放行；正式环境需要收紧来源、方法和请求头。
 - 从代码反推的 mock 信息来源于当前代码实现；业务真实性待登录与工作区权限方案确认。

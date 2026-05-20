@@ -1,4 +1,4 @@
-import { getWorkspaceUserId } from './session'
+import { getWorkspaceUserKey } from './session'
 import { getStoredToken } from './authStorage'
 
 export type HttpRequestOptions = {
@@ -23,7 +23,7 @@ export async function request<T>(path: string, options: HttpRequestOptions = {})
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-workspace-user-id': getWorkspaceUserId(),
+      'x-workspace-user': getWorkspaceUserKey(),
       ...(token ? { token } : {}),
       ...options.headers,
     },

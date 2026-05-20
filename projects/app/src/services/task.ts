@@ -1,7 +1,7 @@
 import { request } from './http'
 import { getStoredToken } from './authStorage'
-import { getWorkspaceUserId } from './session'
-import type { Issue } from './types'
+import { getWorkspaceUserKey } from './session'
+import type { Issue, LocalWorkspace } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3100/api'
 
@@ -32,7 +32,7 @@ export async function uploadRawInputZip(issue: Issue, file: File, overwriteFiles
     method: 'POST',
     headers: {
       'Content-Type': file.type || 'application/zip',
-      'x-workspace-user-id': getWorkspaceUserId(),
+      'x-workspace-user': getWorkspaceUserKey(),
       ...(token ? { token } : {}),
     },
     body: file,
@@ -48,6 +48,15 @@ export async function uploadRawInputZip(issue: Issue, file: File, overwriteFiles
 export type OpenDocumentRegionResult = {
   status: 'opened'
   path: string
+}
+
+export async function ensureWorkspace(issue: Issue) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<LocalWorkspace>(`/task/${issue.id}/workspace/ensure?${params.toString()}`, {
+    method: 'POST',
+  })
 }
 
 export async function openDocumentRegion(issue: Issue) {
