@@ -4,7 +4,6 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
-const { readStore, updateStore } = require('../storage/jsonStore');
 const { syncPmSkillsForFlow } = require('../services/skillSyncService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
@@ -13,61 +12,7 @@ const ZIP_BODY_LIMIT = '100mb';
 const RAW_INPUT_OVERWRITE_FILES = [];
 const execFileAsync = promisify(execFile);
 
-router.get('/', async (_req, res, next) => {
-  try {
-    const data = await readStore();
-    res.json(data.task);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/:demandId', async (req, res, next) => {
-  try {
-    const currentData = await readStore();
-    const currentTask = currentData.tasksById?.[req.params.demandId];
-
-    if (!currentTask) {
-      res.status(404).json({ message: 'Task not found.' });
-      return;
-    }
-
-    const workspace = await ensureDemandWorkspace(currentTask.demand, resolveWorkspaceUserId(req));
-    const skillSync = await syncPmSkillsForFlow({
-      flowSteps: currentTask.flowSteps,
-      workspacePath: workspace.workspacePath,
-    });
-    const shouldPersistWorkspace =
-      currentTask.demand.branch !== workspace.branchName;
-
-    if (!shouldPersistWorkspace) {
-      res.json(withWorkspace(currentTask, workspace, skillSync));
-      return;
-    }
-
-    const data = await updateStore((draft) => {
-      const task = draft.tasksById?.[req.params.demandId];
-
-      if (task) {
-        task.demand.branch = workspace.branchName;
-      }
-
-      return draft;
-    });
-    const task = data.tasksById?.[req.params.demandId];
-
-    if (!task) {
-      res.status(404).json({ message: 'Task not found.' });
-      return;
-    }
-
-    res.json(withWorkspace(task, workspace, skillSync));
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/:demandId/raw-input', express.raw({ type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'], limit: ZIP_BODY_LIMIT }), async (req, res, next) => {
+router.post('/:issueId/raw-input', express.raw({ type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'], limit: ZIP_BODY_LIMIT }), async (req, res, next) => {
   try {
     const fileName = sanitizeZipFileName(req.query.fileName);
     const overwriteFiles = parseOverwriteFiles(req.query.overwriteFiles);
@@ -88,15 +33,7 @@ router.post('/:demandId/raw-input', express.raw({ type: ['application/zip', 'app
       return;
     }
 
-    const currentData = await readStore();
-    const currentTask = currentData.tasksById?.[req.params.demandId];
-
-    if (!currentTask) {
-      res.status(404).json({ message: 'Task not found.' });
-      return;
-    }
-
-    const workspace = await ensureDemandWorkspace(currentTask.demand, resolveWorkspaceUserId(req));
+    const workspace = await prepareIssueWorkspace(req);
     const rawInputDir = path.join(workspace.workspacePath, 'artifacts', workspace.branchName, 'pm-raw', 'input');
     const tmpDir = path.join(workspace.workspacePath, 'tmp');
     const tmpZipPath = path.join(tmpDir, fileName);
@@ -120,33 +57,16 @@ router.post('/:demandId/raw-input', express.raw({ type: ['application/zip', 'app
       ...extraction,
     });
   } catch (error) {
-    if (error.code === 'EEXIST') {
-      res.json({
-        status: 'skipped',
-        message: 'File already exists and was skipped.',
-      });
-      return;
-    }
-
     next(error);
   }
 });
 
-router.post('/:demandId/document-region/open', async (req, res, next) => {
+router.post('/:issueId/document-region/open', async (req, res, next) => {
   try {
-    const currentData = await readStore();
-    const currentTask = currentData.tasksById?.[req.params.demandId];
-
-    if (!currentTask) {
-      res.status(404).json({ message: 'Task not found.' });
-      return;
-    }
-
-    const workspace = await ensureDemandWorkspace(currentTask.demand, resolveWorkspaceUserId(req));
+    const workspace = await prepareIssueWorkspace(req);
     const documentRegionPath = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
 
     await fs.mkdir(documentRegionPath, { recursive: true });
-    // TODO: 最终这里需要根据 vscode-server 协议直接打开指定文件夹。
     await openPath(documentRegionPath);
 
     res.json({
@@ -158,17 +78,27 @@ router.post('/:demandId/document-region/open', async (req, res, next) => {
   }
 });
 
-function withWorkspace(task, workspace, skillSync) {
-  return {
-    ...task,
-    demand: {
-      ...task.demand,
-      workspaceFolder: workspace.workspaceFolder,
-      workspacePath: workspace.workspacePath,
-      branch: workspace.branchName,
-    },
-    skillSync,
-  };
+async function prepareIssueWorkspace(req) {
+  const issueId = String(req.params.issueId || '').trim();
+
+  if (!issueId) {
+    const error = new Error('issueId is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const workspace = await ensureDemandWorkspace({
+    id: issueId,
+    title: req.query.issueName,
+    branch: req.query.branchName,
+  }, resolveWorkspaceUserId(req));
+
+  await syncPmSkillsForFlow({
+    flowSteps: [{ sequence: 0, title: '需求新建', status: 'current' }],
+    workspacePath: workspace.workspacePath,
+  });
+
+  return workspace;
 }
 
 function sanitizeZipFileName(fileName) {
@@ -319,47 +249,5 @@ function resolveRawInputPath(rawInputDir, relativePath) {
   error.statusCode = 400;
   throw error;
 }
-
-router.post('/messages', async (req, res, next) => {
-  try {
-    const message = req.body;
-
-    if (!message || !['user', 'ai'].includes(message.role) || !message.author || !message.body) {
-      res.status(400).json({ message: 'Invalid message payload.' });
-      return;
-    }
-
-    const data = await updateStore((draft) => {
-      draft.task.messages.push(message);
-      draft.task.demand.updatedAt = new Date().toISOString();
-      return draft;
-    });
-
-    res.status(201).json(data.task.messages);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.put('/flow-steps', async (req, res, next) => {
-  try {
-    const flowSteps = req.body;
-
-    if (!Array.isArray(flowSteps)) {
-      res.status(400).json({ message: 'Flow steps payload must be an array.' });
-      return;
-    }
-
-    const data = await updateStore((draft) => {
-      draft.task.flowSteps = flowSteps;
-      draft.task.demand.updatedAt = new Date().toISOString();
-      return draft;
-    });
-
-    res.json(data.task.flowSteps);
-  } catch (error) {
-    next(error);
-  }
-});
 
 module.exports = router;

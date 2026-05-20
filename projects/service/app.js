@@ -2,7 +2,6 @@ const express = require('express');
 const { loadEnv } = require('./src/config/loadEnv');
 const codexRouter = require('./src/routes/codex');
 const taskRouter = require('./src/routes/task');
-const workspaceRouter = require('./src/routes/workspace');
 const { hydrateSessions } = require('./src/services/codex/sessionStore');
 
 loadEnv();
@@ -32,7 +31,6 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', service: 'ai-workbench-service' });
 });
 
-app.use('/api/workspace', workspaceRouter);
 app.use('/api/task', taskRouter);
 app.use('/api/codex', codexRouter);
 

@@ -1,4 +1,3 @@
-const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
@@ -26,22 +25,6 @@ class WorkspaceExistsError extends Error {
   }
 }
 
-async function createDemandWorkspace({ title, description, source, userId }) {
-  const hash = createDemandHash({ title, description, source });
-  const branchName = `task-${hash}`;
-  const workspaceFolder = createWorkspaceFolder({ branchName, userId });
-  const workspacePath = await withWorkspaceLock(workspaceFolder, async () =>
-    cloneDemandBranch({ branchName, workspaceFolder }),
-  );
-
-  return {
-    hash,
-    branchName,
-    workspaceFolder,
-    workspacePath,
-  };
-}
-
 async function ensureDemandWorkspace(demand, userId) {
   const branchName = demand.branch || `task-${demand.id}`;
   const workspaceFolder = createWorkspaceFolder({ branchName, userId });
@@ -67,14 +50,6 @@ async function ensureDemandWorkspaceUnlocked({ branchName, workspaceFolder }) {
     workspaceFolder,
     workspacePath,
   };
-}
-
-function createDemandHash({ title, description, source }) {
-  return crypto
-    .createHash('sha256')
-    .update(`${title}\n${description}\n${source}\n${Date.now()}\n${crypto.randomUUID()}`)
-    .digest('hex')
-    .slice(0, 12);
 }
 
 async function withWorkspaceLock(branchName, task) {
@@ -298,7 +273,6 @@ async function execGit(args, options = {}) {
 module.exports = {
   WorkspaceConfigError,
   WorkspaceExistsError,
-  createDemandWorkspace,
   ensureDemandWorkspace,
   resolveWorkspaceUserId,
 };

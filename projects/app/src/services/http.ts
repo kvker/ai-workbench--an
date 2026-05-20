@@ -11,7 +11,7 @@ export type HttpRequestOptions = {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3100/api'
 
 type ApiResult<T> = {
-  code?: string
+  code?: string | number
   msg?: string
   message?: string
   data?: T
@@ -45,7 +45,7 @@ function unwrapApiResult<T>(payload: T | ApiResult<T>) {
 
   const result = payload as ApiResult<T>
 
-  if (result.code === '0') {
+  if (result.code === '0' || result.code === 0) {
     return result.data as T
   }
 

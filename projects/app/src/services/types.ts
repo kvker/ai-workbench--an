@@ -1,20 +1,5 @@
 export type Tone = 'default' | 'cyan' | 'green' | 'amber' | 'red' | 'blue'
 
-export type Demand = {
-  id: string
-  title: string
-  description: string
-  tags: string[]
-  status: string
-  tone?: Tone
-  featured?: boolean
-}
-
-export type Lane = {
-  title: string
-  demands: Demand[]
-}
-
 export type FlowStep = {
   sequence?: number
   title: string
@@ -22,75 +7,10 @@ export type FlowStep = {
   status: 'done' | 'current' | 'locked'
 }
 
-export type Message = {
-  role: 'user' | 'ai'
-  author: string
-  body: string
-  tools?: { label: string; status: string; tone: Tone }[]
-}
-
-export type DemandDetail = {
-  id: string
-  title: string
-  status: string
-  priority: string
-  owner: string
-  source: string
-  workspaceFolder: string
-  workspacePath?: string
-  branch: string
-  createdAt: string
-  updatedAt: string
-}
-
 export type DocumentSummary = {
   title: string
   body: string
   tone: Tone
-}
-
-export type ConversationSummary = {
-  title: string
-  meta: string
-  active?: boolean
-}
-
-export type CodePreview = {
-  lines: string[]
-}
-
-export type WorkbenchMockData = {
-  workspace: {
-    activeDemandId: string
-    lanes: Lane[]
-  }
-  task: {
-    demand: DemandDetail
-    flowSteps: FlowStep[]
-    messages: Message[]
-    documents: DocumentSummary[]
-    conversations: ConversationSummary[]
-    codePreview: CodePreview
-    skillSync?: {
-      status: 'synced' | 'skipped' | 'partial'
-      reason?: string
-      copied: string[]
-      missing?: { name: string; sourcePath: string }[]
-      failed?: { name: string; message: string }[]
-      error?: string
-      sourceRoot?: string
-      sourceRootCandidates?: string[]
-      targetRoot?: string
-    }
-  }
-  tasksById?: Record<string, WorkbenchMockData['task']>
-}
-
-export type CreateDemandInput = {
-  title: string
-  description: string
-  source: '业务方' | '产品方'
-  laneTitle?: string
 }
 
 export type AuthType = 0 | 1
@@ -114,4 +34,112 @@ export type LoginUser = {
   dingTalkUserId?: string | null
   yunxiaoAccessToken?: string | null
   token: string
+}
+
+export type UserBaseInfo = {
+  userId: number
+  userName: string
+  displayName?: string
+  userSource?: number
+  gitlabUserId?: number | null
+  gitlabUserName?: string | null
+  realName?: string
+  mobile?: string | null
+  nick?: string | null
+  dingTalkUserId?: string | null
+  yunxiaoAccessToken?: string | null
+}
+
+export type IssueStatus = 1 | 2 | 3 | 4
+
+export type HarnessStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+export type IssueType = 1 | 2 | 3 | 4
+
+export type IssueSource = 1 | 2 | 3 | 4
+
+export type Issue = {
+  id: number
+  issueName: string
+  issueType: IssueType
+  issueTypeDesc?: string
+  commitTestDoc?: string
+  integrationPlanDoc?: string
+  prd?: string
+  requireDetailUrl?: string
+  issueSource: IssueSource
+  issueSourceDesc?: string
+  status: IssueStatus
+  issueStatusDesc?: string
+  remark?: string
+  createdUser?: string
+  createdUserName?: string
+  assignedUserName?: string
+  assignedUser?: string
+  createdAt?: string
+  stakeholders?: string[]
+  isHarness?: boolean
+  wsBranchName?: string
+  harnessStatus?: HarnessStatus
+  harnessStatusCode?: string
+  harnessStatusDesc?: string
+}
+
+export type HarnessIssueGroup = {
+  harnessStatus: HarnessStatus
+  harnessStatusDesc?: string
+  issues: Issue[]
+}
+
+export type DeployPlan = {
+  id: number
+  issueId: number
+  issueName?: string
+  projectName?: string
+  projectCode?: string
+  branchName?: string
+  status?: number
+  statusDesc?: string
+}
+
+export type IssueBoard = Issue & {
+  deployPlans?: DeployPlan[]
+}
+
+export type IssueHarnessListQuery = {
+  harnessStatusList?: HarnessStatus[]
+}
+
+export type CreateIssueInput = {
+  issueName: string
+  issueType: IssueType
+  issueSource: IssueSource
+  remark?: string
+  assignedUser: string
+  stakeholders?: string[]
+  isHarness?: boolean
+}
+
+export type DevopsWorkspace = {
+  id: number
+  taskName: string
+  branchName?: string
+  workspacePath?: string
+  userName?: string
+  repositories?: string
+  opencodeSession?: string
+  devopsIssueId?: number
+  status?: number
+  statusDesc?: string
+  createdAt?: string
+  lastActiveAt?: string
+  repoCount?: number
+}
+
+export type IssueTask = {
+  issue: Issue
+  board?: IssueBoard
+  workspace?: DevopsWorkspace
+  flowSteps: FlowStep[]
+  documents: DocumentSummary[]
 }

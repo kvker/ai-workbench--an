@@ -1,27 +1,20 @@
 import { Switch } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAppTheme } from '../providers/themeContext'
-import { authService, taskService, workspaceService } from '../services'
+import { authService } from '../services'
 import { PrimaryButton } from './Button'
 
-const demandId = workspaceService.getActiveDemandId()
-const demand = taskService.getMockTask().demand
 export const CREATE_DEMAND_EVENT = 'ai-workbench:create-demand'
-
-const titles: Record<string, string> = {
-  '/demands': 'AI Native 产研需求看板',
-  [`/demands/${demandId}`]: `${demand.title} · ${demand.status}`,
-}
 
 export function Topbar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { isDark, setMode } = useAppTheme()
   const currentUser = authService.getCurrentUser()
-  const title = titles[location.pathname] ?? titles['/demands']
   const isBoard = location.pathname === '/demands'
-  const isDetail = location.pathname === `/demands/${demandId}`
+  const isDetail = location.pathname.startsWith('/demands/')
   const sectionName = isBoard ? '需求页' : '详情页'
+  const title = isBoard ? 'AI Native 产研需求看板' : '需求详情'
 
   return (
     <header
@@ -42,7 +35,7 @@ export function Topbar() {
       <div className="min-w-0">
         {!isBoard && (
           <div className="truncate text-xs text-slate-400">
-            REQ-20260518-004 / {demand.branch}
+            DevOps Issue
           </div>
         )}
         <h1 className="truncate text-lg font-extrabold leading-tight lg:text-xl">{title}</h1>
@@ -64,11 +57,7 @@ export function Topbar() {
           />
         </div>
         {isBoard && <PrimaryButton onClick={() => window.dispatchEvent(new Event(CREATE_DEMAND_EVENT))}>创建需求</PrimaryButton>}
-        {isDetail && (
-          <PrimaryButton href="https://www.baidu.com" target="_blank">
-            打开代码页
-          </PrimaryButton>
-        )}
+        {isDetail && null}
         <PrimaryButton
           onClick={() => {
             authService.clearCurrentUser()

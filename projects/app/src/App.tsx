@@ -6,11 +6,10 @@ import { DemandBoardPage } from './pages/DemandBoardPage'
 import { DemandDetailPage } from './pages/DemandDetailPage'
 import { LoginPage } from './pages/LoginPage'
 import { useAppTheme } from './providers/themeContext'
-import { authService, workspaceService } from './services'
+import { authService } from './services'
 
 function App() {
   const { isDark } = useAppTheme()
-  const activeDemandId = workspaceService.getActiveDemandId()
 
   return (
     <Routes>
@@ -19,7 +18,7 @@ function App() {
         path="/*"
         element={
           <RequireAuth>
-            <WorkbenchShell activeDemandId={activeDemandId} isDark={isDark} />
+            <WorkbenchShell isDark={isDark} />
           </RequireAuth>
         }
       />
@@ -37,7 +36,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return children
 }
 
-function WorkbenchShell({ activeDemandId, isDark }: { activeDemandId: string; isDark: boolean }) {
+function WorkbenchShell({ isDark }: { isDark: boolean }) {
   return (
     <main
       className={`min-h-screen p-3 transition-colors sm:p-4 ${
@@ -56,7 +55,7 @@ function WorkbenchShell({ activeDemandId, isDark }: { activeDemandId: string; is
           <Route path="/" element={<Navigate to="/demands" replace />} />
           <Route path="/demands" element={<DemandBoardPage />} />
           <Route path="/demands/:demandId" element={<DemandDetailPage />} />
-          <Route path="*" element={<Navigate to={`/demands/${activeDemandId}`} replace />} />
+          <Route path="*" element={<Navigate to="/demands" replace />} />
         </Routes>
       </section>
     </main>
