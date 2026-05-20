@@ -102,6 +102,7 @@
 | [20260519__template-workspace-clone](artifacts/20260519__template-workspace-clone/) | 创建需求时从模板仓库浅克隆工作区并切换需求分支 | 已完成 |
 | [20260519__codex-conversation-module](artifacts/20260519__codex-conversation-module/) | 封装前端与 service 的 Codex 对话模块 | 活跃 |
 | [20260519__frontend-login-page](artifacts/20260519__frontend-login-page/) | 增加前端登录页并接入 devops 登录接口 | 已完成 |
+| [20260520__detail-raw-upload](artifacts/20260520__detail-raw-upload/) | 详情页增加上传原始需求与打开文档区入口 | 活跃 |
 
 ## Skill 路由
 

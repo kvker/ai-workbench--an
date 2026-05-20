@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
-import { FloatButton, Modal, Steps } from 'antd'
+import { useCallback, useRef, useState } from 'react'
+import { FileTextOutlined, FolderOpenOutlined, UploadOutlined } from '@ant-design/icons'
+import { Button, FloatButton, message, Modal, Steps } from 'antd'
 import { useParams } from 'react-router-dom'
 import { PrimaryButton } from '../components/Button'
 import { Pill } from '../components/Pill'
@@ -19,8 +20,11 @@ import { mutedText, pageBand, panel } from '../utils/themeClasses'
 // Page: 详情页
 export function DemandDetailPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
+  const rawInputRef = useRef<HTMLInputElement>(null)
   const { demandId = '' } = useParams()
   const { isDark } = useAppTheme()
+  const [messageApi, contextHolder] = message.useMessage()
   const loadTask = useCallback(() => taskService.getTaskByDemandId(demandId), [demandId])
   const { data: task, loading } = useAsyncData(mockData.task, loadTask)
   const { demand, flowSteps, documents } = task
@@ -28,11 +32,76 @@ export function DemandDetailPage() {
     0,
     flowSteps.findIndex((step) => step.status === 'current'),
   )
+  const canUploadRawInput = flowSteps[currentFlowStepIndex]?.title === '需求分析'
+  const openRawInputPicker = () => rawInputRef.current?.click()
+  const openDocumentRegion = async () => {
+    Modal.info({
+      title: '打开文档区',
+      content: '当前先打开本地文档区；未来这里会直接打开 Web 版本的 IDE 编辑器，并定位到该需求的文档目录。',
+      okText: '打开',
+      async onOk() {
+        try {
+          await taskService.openDocumentRegion(demand.id)
+          messageApi.success('已打开文档区')
+        } catch (error) {
+          messageApi.error(error instanceof Error ? error.message : '打开文档区失败')
+        }
+      },
+    })
+  }
+
+  const uploadRawInput = async (file: File | undefined) => {
+    if (!file) {
+      return
+    }
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      messageApi.error('请上传 zip 文件')
+      return
+    }
+
+    setIsUploadingRawInput(true)
+
+    try {
+      const result = await taskService.uploadRawInputZip(demand.id, file)
+      const uploadedCount = (result.uploaded?.length ?? 0) + (result.overwritten?.length ?? 0)
+      const skippedCount = result.skipped?.length ?? 0
+
+      if (uploadedCount === 0 && skippedCount > 0) {
+        messageApi.info(`原始需求已存在，跳过 ${skippedCount} 个文件`)
+      } else {
+        messageApi.success(`已导入 ${uploadedCount} 个文件${skippedCount ? `，跳过 ${skippedCount} 个` : ''}`)
+      }
+    } catch (error) {
+      messageApi.error(error instanceof Error ? error.message : '上传失败')
+    } finally {
+      setIsUploadingRawInput(false)
+      if (rawInputRef.current) {
+        rawInputRef.current.value = ''
+      }
+    }
+  }
 
   return (
     <section className="grid min-h-0 grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]">
+      {contextHolder}
+      <input
+        ref={rawInputRef}
+        type="file"
+        accept=".zip,application/zip,application/x-zip-compressed"
+        className="hidden"
+        onChange={(event) => void uploadRawInput(event.target.files?.[0])}
+      />
       <aside className={`grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 border-b p-4 lg:border-b-0 lg:border-r ${pageBand(isDark)}`}>
-        <DemandInfoRegion demand={demand} isDark={isDark} onOpenDetail={() => setIsDetailOpen(true)} />
+        <DemandInfoRegion
+          demand={demand}
+          isDark={isDark}
+          canUploadRawInput={canUploadRawInput}
+          isUploadingRawInput={isUploadingRawInput}
+          onOpenDetail={() => setIsDetailOpen(true)}
+          onOpenDocumentRegion={openDocumentRegion}
+          onUploadRawInput={openRawInputPicker}
+        />
         <WorkflowRegion currentFlowStepIndex={currentFlowStepIndex} flowSteps={flowSteps} isDark={isDark} />
         <ArtifactRegion documents={documents} isDark={isDark} />
       </aside>
@@ -59,18 +128,39 @@ export function DemandDetailPage() {
 function DemandInfoRegion({
   demand,
   isDark,
+  canUploadRawInput,
+  isUploadingRawInput,
   onOpenDetail,
+  onOpenDocumentRegion,
+  onUploadRawInput,
 }: {
   demand: DemandDetail
   isDark: boolean
+  canUploadRawInput: boolean
+  isUploadingRawInput: boolean
   onOpenDetail: () => void
+  onOpenDocumentRegion: () => void
+  onUploadRawInput: () => void
 }) {
   // Region: 信息区
   return (
     <section className={`rounded-lg border p-3 ${panel(isDark)}`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-base font-extrabold leading-snug">{demand.title}</div>
-        <PrimaryButton onClick={onOpenDetail}>查看详情</PrimaryButton>
+        <div className="flex flex-wrap justify-end gap-2">
+          {canUploadRawInput && (
+            <Button icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput} className="text-xs font-extrabold">
+              上传原始需求
+            </Button>
+          )}
+          <Button icon={<FolderOpenOutlined />} onClick={onOpenDocumentRegion} className="text-xs font-extrabold">
+            打开文档区
+          </Button>
+          <PrimaryButton onClick={onOpenDetail}>
+            <FileTextOutlined />
+            查看详情
+          </PrimaryButton>
+        </div>
       </div>
     </section>
   )
