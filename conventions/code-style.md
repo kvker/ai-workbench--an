@@ -27,6 +27,15 @@
 
 来源：`projects/app/AGENTS.md`、`projects/service/AGENTS.md`、目录扫描。
 
+## 前端组件与样式
+
+- `projects/app` 前端交互组件必须优先使用 antd，例如按钮、输入框、表单、弹窗、分段控制、开关、步骤条、标签、加载态和消息提示。
+- Tailwind CSS 仅作为辅助样式工具，主要用于布局、间距、尺寸、响应式、文本裁剪等轻量 class，不作为替代 antd 组件体系的基础 UI 实现。
+- 需要项目语义化封装时，可以在 `projects/app/src/components/` 包装 antd 组件，但封装内部仍应沿用 antd 的交互、状态和可访问性能力。
+- 颜色、暗色模式和组件主题优先通过 `ConfigProvider`、主题 token 或既有样式 helper 统一处理，避免在页面中散落大段一次性视觉样式。
+
+来源：用户指令、`projects/app/package.json`、`projects/app/src/providers/AppThemeProvider.tsx`、`projects/app/src/pages/DemandBoardPage.tsx`、`projects/app/src/pages/DemandDetailPage.tsx`、`projects/app/src/components/`。
+
 ## 注释与文档
 
 - 文档保持简约清楚，优先记录代码事实、用户明确输入和待确认项。
@@ -34,3 +43,9 @@
 - 不用注释解释显而易见的赋值或框架样板。
 
 来源：`projects/service/AGENTS.md`、根 `AGENTS.md` 行为约束。
+
+## 更新记录
+
+| 日期 | 更新内容 | 触发来源 |
+|------|---------|---------|
+| 2026-05-20 | 补充前端组件必须优先使用 antd，Tailwind CSS 仅辅助布局、间距等轻量样式的约束。 | an-refresh / 用户指令 |
