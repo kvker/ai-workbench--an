@@ -42,13 +42,13 @@ function WorkbenchShell({ activeDemandId, isDark }: { activeDemandId: string; is
     <main
       className={`min-h-screen p-3 transition-colors sm:p-4 ${
         isDark
-          ? 'bg-[#050816] text-slate-100'
-          : 'bg-gradient-to-br from-slate-50 via-cyan-50 to-blue-50 text-slate-950'
+          ? 'bg-slate-950 text-slate-100'
+          : 'bg-slate-100 text-slate-950'
       }`}
     >
       <section
-        className={`mx-auto grid h-[calc(100vh-24px)] max-w-[1600px] grid-rows-[auto_1fr] overflow-hidden rounded-2xl border shadow-[0_28px_90px_rgba(0,0,0,0.18)] transition-colors sm:h-[calc(100vh-32px)] ${
-          isDark ? 'border-slate-400/20 bg-[#070c1a]/95' : 'border-slate-200 bg-white/90'
+        className={`mx-auto grid h-[calc(100vh-24px)] max-w-[1600px] grid-rows-[auto_1fr] overflow-hidden rounded-xl border shadow-[0_18px_60px_rgba(15,23,42,0.12)] transition-colors sm:h-[calc(100vh-32px)] ${
+          isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'
         }`}
       >
         <Topbar />

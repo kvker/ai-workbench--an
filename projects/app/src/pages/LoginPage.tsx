@@ -50,22 +50,22 @@ export function LoginPage() {
     <section
       className={`grid min-h-screen place-items-center p-4 ${
         isDark
-          ? 'bg-[#050816] text-slate-100'
-          : 'bg-[linear-gradient(135deg,#f8fafc_0%,#ecfeff_45%,#eff6ff_100%)] text-slate-950'
+          ? 'bg-slate-950 text-slate-100'
+          : 'bg-slate-100 text-slate-950'
       }`}
     >
       <div
-        className={`grid w-full max-w-[980px] overflow-hidden rounded-2xl border shadow-[0_28px_90px_rgba(15,23,42,0.18)] lg:grid-cols-[1fr_420px] ${
-          isDark ? 'border-slate-400/20 bg-[#070c1a]' : 'border-slate-200 bg-white'
+        className={`grid w-full max-w-[980px] overflow-hidden rounded-xl border shadow-[0_18px_60px_rgba(15,23,42,0.14)] lg:grid-cols-[1fr_420px] ${
+          isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'
         }`}
       >
         <div
           className={`hidden min-h-[560px] p-10 lg:grid lg:grid-rows-[auto_1fr_auto] ${
-            isDark ? 'bg-slate-950' : 'bg-slate-950 text-white'
+            isDark ? 'bg-slate-900' : 'bg-slate-950 text-white'
           }`}
         >
           <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-lg bg-cyan-300 text-lg font-black text-slate-950">
+            <span className="grid size-10 place-items-center rounded-lg bg-indigo-500 text-lg font-black text-white">
               H
             </span>
             <span>
@@ -74,7 +74,7 @@ export function LoginPage() {
             </span>
           </div>
           <div className="flex flex-col justify-center">
-            <p className="text-sm font-bold text-cyan-200">登录后进入需求看板</p>
+            <p className="text-sm font-bold text-indigo-200">登录后进入需求看板</p>
             <h1 className="mt-4 max-w-[520px] text-4xl font-black leading-tight">
               让需求、代码和交付过程回到同一个工作台。
             </h1>
@@ -91,7 +91,7 @@ export function LoginPage() {
         <div className={`p-6 sm:p-8 ${isDark ? 'bg-slate-900/90' : 'bg-white'}`}>
           <div className="mb-8 lg:hidden">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-lg bg-cyan-300 text-lg font-black text-slate-950">
+              <span className="grid size-10 place-items-center rounded-lg bg-indigo-600 text-lg font-black text-white">
                 H
               </span>
               <span>

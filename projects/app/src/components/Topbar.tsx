@@ -26,11 +26,11 @@ export function Topbar() {
   return (
     <header
       className={`grid min-h-16 grid-cols-[minmax(0,1fr)] items-center gap-3 border-b px-4 py-3 transition-colors lg:grid-cols-[260px_minmax(0,1fr)_auto] lg:py-0 ${
-        isDark ? 'border-slate-700/80 bg-slate-950/70' : 'border-slate-200 bg-white/80'
+        isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-white'
       }`}
     >
       <Link to="/demands" className="flex min-w-0 items-center gap-3 text-left">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-cyan-400 via-blue-400 to-emerald-300 font-black text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.35)]">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-indigo-600 font-black text-white shadow-[0_8px_18px_rgba(79,70,229,0.22)]">
           H
         </span>
         <span className="min-w-0">
@@ -54,7 +54,7 @@ export function Topbar() {
             {currentUser.displayName || currentUser.realName || currentUser.userName}
           </span>
         )}
-        <div className="flex items-center gap-2 rounded-lg border border-slate-500/20 px-2 py-1">
+        <div className={`flex items-center gap-2 rounded-lg border px-2 py-1 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
           <span className={`text-xs font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>暗色</span>
           <Switch
             checked={isDark}

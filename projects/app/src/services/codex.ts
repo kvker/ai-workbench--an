@@ -15,10 +15,18 @@ export type CodexSession = {
   approvalPolicy: string
   sandboxMode: string
   networkAccess: boolean
+  adapter?: 'real' | 'mock'
   status: 'idle' | 'running'
   createdAt: string
   updatedAt: string
+  metadata?: {
+    alias?: string
+    [key: string]: unknown
+  }
+  events?: CodexConversationEvent[]
 }
+
+export type CodexSessionSummary = Omit<CodexSession, 'events'>
 
 export type CodexPlanStep = {
   text: string
@@ -44,6 +52,10 @@ export type CodexConversationEvent = {
 export type CodexSessionEventsResponse = {
   session: CodexSession
   events: CodexConversationEvent[]
+}
+
+export type CodexSessionListResponse = {
+  sessions: CodexSessionSummary[]
 }
 
 export type CreateCodexSessionInput = {
@@ -74,6 +86,25 @@ export async function createCodexSession(input: CreateCodexSessionInput, apiBase
   })
 }
 
+export async function listCodexSessions(
+  input: { demandId?: string; workspaceId?: string },
+  apiBaseUrl = CODEX_API_BASE_URL,
+) {
+  const params = new URLSearchParams()
+
+  if (input.demandId) {
+    params.set('demandId', input.demandId)
+  }
+
+  if (input.workspaceId) {
+    params.set('workspaceId', input.workspaceId)
+  }
+
+  const query = params.toString()
+
+  return request<CodexSessionListResponse>(apiBaseUrl, `/api/codex/sessions${query ? `?${query}` : ''}`)
+}
+
 export async function getCodexEvents(sessionId: string, apiBaseUrl = CODEX_API_BASE_URL) {
   return request<CodexSessionEventsResponse>(apiBaseUrl, `/api/codex/sessions/${sessionId}/events`)
 }
@@ -91,10 +122,21 @@ export async function interruptCodexTurn(sessionId: string, apiBaseUrl = CODEX_A
   })
 }
 
+export async function renameCodexSession(sessionId: string, alias: string, apiBaseUrl = CODEX_API_BASE_URL) {
+  return request<CodexSession>(apiBaseUrl, `/api/codex/sessions/${sessionId}`, {
+    method: 'PATCH',
+    body: { alias },
+  })
+}
+
+export function getCodexStreamUrl(sessionId: string, apiBaseUrl = CODEX_API_BASE_URL) {
+  return `${apiBaseUrl}/api/codex/sessions/${sessionId}/stream`
+}
+
 async function request<T>(
   apiBaseUrl: string,
   path: string,
-  options: { method?: 'GET' | 'POST'; body?: unknown } = {},
+  options: { method?: 'GET' | 'POST' | 'PATCH'; body?: unknown } = {},
 ): Promise<T> {
   const token = getStoredToken()
   const response = await fetch(`${apiBaseUrl}${path}`, {

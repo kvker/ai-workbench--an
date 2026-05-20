@@ -239,11 +239,13 @@ function DetailDialog({ demand, open, onClose }: { demand: DemandDetail; open: b
 }
 
 function QuickDoc({ title, body, tone }: { title: string; body: string; tone: Tone }) {
+  const { isDark } = useAppTheme()
+
   return (
     <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-slate-500/15 py-3 first:border-t-0">
       <div>
         <div className="text-xs font-extrabold">{title}</div>
-        <p className={`mt-1 text-xs leading-relaxed ${mutedText(false)}`}>{body}</p>
+        <p className={`mt-1 text-xs leading-relaxed ${mutedText(isDark)}`}>{body}</p>
       </div>
       <Pill tone={tone}>{tone === 'cyan' ? '当前' : '完成'}</Pill>
     </div>

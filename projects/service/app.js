@@ -3,6 +3,7 @@ const { loadEnv } = require('./src/config/loadEnv');
 const codexRouter = require('./src/routes/codex');
 const taskRouter = require('./src/routes/task');
 const workspaceRouter = require('./src/routes/workspace');
+const { hydrateSessions } = require('./src/services/codex/sessionStore');
 
 loadEnv();
 
@@ -40,6 +41,14 @@ app.use((error, _req, res, _next) => {
   res.status(error.statusCode ?? 500).json({ message: error.message ?? 'Internal service error.' });
 });
 
-app.listen(port, () => {
-  console.log(`AI Workbench service listening on port ${port}`);
-});
+hydrateSessions()
+  .then((sessionCount) => {
+    app.listen(port, () => {
+      console.log(`AI Workbench service listening on port ${port}`);
+      console.log(`Loaded ${sessionCount} Codex sessions.`);
+    });
+  })
+  .catch((error) => {
+    console.error('Failed to load Codex sessions.', error);
+    process.exit(1);
+  });

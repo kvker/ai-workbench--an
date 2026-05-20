@@ -19,8 +19,11 @@
 | 本地 JSON 过程数据 | `projects/service/data/workbench.json` 保存工作台、任务详情、流程和消息原型数据 | 需求列表与详情页数据 | 替换为真实持久化方案或任务工程内元数据；接口契约需另行确认 | 待替换 |
 | 前端内置 fallback 数据 | `projects/app/src/services/mock.json` 与 `mockData` 在服务不可用时作为 fallback | service 不可用时页面仍显示原型数据 | 真实环境下应移除或仅作为开发故事数据，不参与生产运行 | 待替换 |
 | 代码页入口 | 详情页移动端 FloatButton 暂时打开 `https://www.baidu.com` | 代码页入口不可用 | 接入当前需求工作区绑定的 vscode-server 或代码页服务地址 | 待替换 |
-| Codex 对话 mock adapter | `projects/service/src/services/codex/mockAdapter.js` 在 `/api/codex/*` 下返回模拟 session、计划、命令输出和 assistant 消息 | 对话区可完成模块联调，但未真正调用 `codex app-server` | 在 `projects/service/src/services/codex/service.js` 中按 adapter 接口接入真实 Codex app-server JSON-RPC/SSE/WebSocket 事件流 | 待替换 |
-| Codex 事件快照接口 | `GET /api/codex/sessions/:sessionId/events` 返回当前内存事件列表，前端未使用真实流式 SSE/WebSocket | 对话事件不是实时增量推送，刷新后内存 session 丢失 | 后续替换为持久化 session + SSE/WebSocket 事件流，同时保持前端 `CodexConversationModule` 入参不变 | 待替换 |
+| Codex 对话 mock adapter | `projects/service/src/services/codex/mockAdapter.js` 在 `CODEX_ENABLE_REAL_ADAPTER=false` 时返回模拟 session、计划、命令输出和 assistant 消息 | 仅用于本地降级/开发；真实 adapter 已支持最小 app-server 对话闭环 | 保留为开发 fallback；正式环境使用 `CODEX_ENABLE_REAL_ADAPTER=true` | 开发 fallback |
+| Codex session JSON 持久化 | `projects/service/data/codex-sessions.json` 保存 service 自己的 session 与事件快照 | 原型阶段可恢复历史事件；但 app-server 子进程不会跨 service 重启恢复 | 后续补充真实 app-server thread resume、session 清理策略和更正式的存储方案 | 原型持久化 |
+| Codex SSE 鉴权 | `EventSource` 订阅 `/stream` 暂未携带自定义 token header | 本地开发可用；正式环境不能仅依赖当前全放行 CORS | 正式鉴权需使用 cookie、服务端 session 或签名 stream URL | 待接入 |
+| Codex approval 未接入 | `projects/service/src/services/codex/realAdapter.js` 中 `resolveApproval` 暂未实现真实 app-server approval 协议 | 遇到真实审批请求时无法在前端完成审批处理 | 接入 app-server 的 approval request/resolution 协议，并补充前端审批 UI | 待接入 |
+| vscode-server 代码页入口 | 对话区 command/diff 事件目前只在工作台内轻量展示，尚未联动代码页 | 完整终端、diff、文件编辑能力不应在对话区重复实现 | 后续由 service 提供当前需求 workspace 的 vscode-server URL/deep link，对话区只展示摘要并跳转代码页 | 待接入 |
 
 ## 已知注意事项
 

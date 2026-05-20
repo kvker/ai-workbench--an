@@ -34,13 +34,13 @@ async function startTurn(session, input) {
   appendEvent(session.id, {
     type: 'command.output',
     itemId: `${turnId}_command`,
-    chunk: `mock adapter cwd=${session.cwd} model=${session.model}`,
+    chunk: `AI mock adapter cwd=${session.cwd} model=${session.model}`,
   });
   appendEvent(session.id, {
     type: 'message.completed',
     itemId: `${turnId}_assistant`,
     role: 'assistant',
-    text: '已收到。当前是 Codex mock adapter 响应，真实 app-server 接入会在 service adapter 层替换。',
+    text: '已收到。当前是 AI mock adapter 响应，请检查 service 是否已启用真实 app-server adapter。',
   });
   appendEvent(session.id, {
     type: 'turn.completed',

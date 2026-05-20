@@ -2,6 +2,7 @@ const path = require('node:path');
 
 function getCodexConfig() {
   return {
+    appServerBin: process.env.CODEX_APP_SERVER_BIN || 'codex',
     workspaceRoot: process.env.CODEX_WORKSPACE_ROOT || '/Users/zweizhao/project/current',
     defaultModel: process.env.CODEX_DEFAULT_MODEL || 'gpt-5.5',
     defaultEffort: process.env.CODEX_DEFAULT_EFFORT || 'medium',
@@ -9,6 +10,8 @@ function getCodexConfig() {
     sandboxMode: process.env.CODEX_SANDBOX_MODE || 'danger-full-access',
     networkAccess: readBoolean(process.env.CODEX_NETWORK_ACCESS, true),
     enableRealAdapter: readBoolean(process.env.CODEX_ENABLE_REAL_ADAPTER, false),
+    appServerRequestTimeoutMs: Number(process.env.CODEX_APP_SERVER_REQUEST_TIMEOUT_MS || 30000),
+    appServerTurnTimeoutMs: Number(process.env.CODEX_APP_SERVER_TURN_TIMEOUT_MS || 0),
   };
 }
 

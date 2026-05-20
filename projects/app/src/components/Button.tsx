@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Button } from 'antd'
 import { NavLink } from 'react-router-dom'
 import { useAppTheme } from '../providers/themeContext'
-import { toneClasses } from '../utils/toneClasses'
+import { toneClass } from '../utils/toneClasses'
 
 export function PrimaryButton({
   children,
@@ -50,7 +50,7 @@ export function NavButton({ children, to }: { children: ReactNode; to: string })
   return (
     <NavLink to={to}>
       {({ isActive }) => (
-        <Button className={`text-xs font-extrabold ${isActive ? toneClasses.cyan : isDark ? 'border-slate-600/80 bg-slate-900/80 text-slate-300' : ''}`}>
+        <Button className={`text-xs font-extrabold ${isActive ? toneClass('cyan', isDark) : isDark ? 'border-slate-700 bg-slate-900/80 text-slate-300' : ''}`}>
           {children}
         </Button>
       )}

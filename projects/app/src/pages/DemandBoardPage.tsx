@@ -95,7 +95,7 @@ function DemandBoardContent({
   loading: boolean
 }) {
   return (
-    <div className={`min-h-0 overflow-auto p-3 ${isDark ? 'bg-slate-950/50' : 'bg-slate-100/70'}`}>
+    <div className={`min-h-0 overflow-auto p-3 ${isDark ? 'bg-slate-950/60' : 'bg-slate-100'}`}>
       {loading ? (
         <div className={`grid min-h-[360px] place-items-center rounded-lg border text-sm font-bold ${panel(isDark)}`}>
           正在加载需求数据...
@@ -125,12 +125,12 @@ function DemandLaneGrid({ isDark, lanes }: { isDark: boolean; lanes: Lane[] }) {
         <section
           key={lane.title}
           className={`grid min-h-[640px] grid-rows-[auto_1fr] overflow-hidden rounded-lg border ${
-            isDark ? 'border-slate-700/80 bg-slate-900/70' : 'border-slate-200 bg-white/80'
+            isDark ? 'border-slate-800 bg-slate-900/80' : 'border-slate-200 bg-white'
           }`}
         >
           <header className={`flex min-h-14 items-center justify-between gap-2 border-b px-3 ${pageBand(isDark)}`}>
             <h2 className="text-sm font-extrabold">{lane.title}</h2>
-            <Badge count={lane.demands.length} color="#22d3ee" />
+            <Badge count={lane.demands.length} color="#4f46e5" />
           </header>
           <div className="min-h-0 overflow-auto p-2">
             {lane.demands.map((demand) => (
@@ -147,7 +147,7 @@ function DemandCard({ demand, isDark }: { demand: Demand; isDark: boolean }) {
   return (
     <Link
       to={`/demands/${demand.id}`}
-      className={`mb-2 block w-full rounded-lg border p-3 text-left transition hover:border-cyan-300/70 ${panel(isDark)}`}
+      className={`mb-2 block w-full rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)] ${panel(isDark)}`}
     >
       <div className="text-sm font-extrabold leading-snug">{demand.title}</div>
       <p className={`mt-2 text-xs leading-relaxed ${mutedText(isDark)}`}>{demand.description}</p>
