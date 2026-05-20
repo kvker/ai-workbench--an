@@ -4,6 +4,8 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
+const { updateWorkspaceCode } = require('../services/codeUpdateService');
+const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
 const { syncPmSkillsForFlow } = require('../services/skillSyncService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
@@ -74,7 +76,7 @@ router.post('/:issueId/raw-input', express.raw({ type: ['application/zip', 'appl
 router.post('/:issueId/document-region/open', async (req, res, next) => {
   try {
     const workspace = await prepareIssueWorkspace(req);
-    const documentRegionPath = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
+    const documentRegionPath = workspace.workspacePath;
 
     await fs.mkdir(documentRegionPath, { recursive: true });
     await openPath(documentRegionPath);
@@ -82,6 +84,37 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
     res.json({
       status: 'opened',
       path: documentRegionPath,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:issueId/identity/sync', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+    const result = await syncKnowledgeForIdentity({
+      identity: req.body?.identity,
+      workspacePath: workspace.workspacePath,
+    });
+
+    res.json({
+      ...result,
+      workspace: toWorkspaceResponse(workspace),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:issueId/code/update', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+    const result = await updateWorkspaceCode(workspace.workspacePath);
+
+    res.json({
+      ...result,
+      workspace: toWorkspaceResponse(workspace),
     });
   } catch (error) {
     next(error);

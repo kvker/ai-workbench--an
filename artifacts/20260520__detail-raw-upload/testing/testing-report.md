@@ -7,6 +7,41 @@
   - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次功能。
 - `projects/service`: `node -c src/routes/task.js`
   - 结果：通过。
+- 2026-05-20 文档区目录修正验证：
+  - `projects/service`: `node -c src/routes/task.js`
+    - 结果：通过。
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次修正。
+- 2026-05-20 身份切换入口验证：
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次入口新增。
+- 2026-05-20 身份切换同步验证：
+  - `projects/service`: `node -c src/services/knowledgeSyncService.js && node -c src/routes/task.js`
+    - 结果：通过。
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次同步接入。
+  - 临时 git 知识库 + 临时工作区调用 `syncKnowledgeForIdentity({ identity: 'pm' })`
+    - 结果：通过。
+    - 备注：验证 `background`、`conventions`、角色 skills、shared skills、角色 agents、shared agents 均复制成功，且旧 `background` 与旧 `.codex/skills` 内容已清空。
+  - 临时 git 知识库缺失 `skills/fe` 与 `agents/fe` 时调用 `syncKnowledgeForIdentity({ identity: 'fe' })`
+    - 结果：通过。
+    - 备注：返回 `partial` 与 2 个 missing，shared skills 与 shared agents 仍复制成功。
+- 2026-05-20 更新代码入口验证：
+  - `projects/service`: `node -c src/services/codeUpdateService.js && node -c src/routes/task.js`
+    - 结果：通过。
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次入口新增。
+  - 临时工作区根仓库 + `repos/app` 仓库调用 `updateWorkspaceCode`
+    - 结果：通过。
+    - 备注：两个仓库均按当前分支执行更新，文件内容从 `v1` 更新到远端 `v2`。
+- 2026-05-20 信息区按钮样式与顺序验证：
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次样式调整。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。

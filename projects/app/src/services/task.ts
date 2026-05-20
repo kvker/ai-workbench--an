@@ -50,6 +50,25 @@ export type OpenDocumentRegionResult = {
   path: string
 }
 
+export type DemandIdentity = 'pm' | 'fe' | 'be' | 'qa'
+
+export type SyncDemandIdentityResult = {
+  status: 'synced' | 'partial'
+  identity: DemandIdentity
+  knowledgeRootDir: string
+  workspacePath: string
+  copied?: Array<{ label: string; sourcePath: string; targetPath: string }>
+  missing?: Array<{ label: string; sourcePath: string }>
+  workspace?: LocalWorkspace
+}
+
+export type UpdateCodeResult = {
+  status: 'updated' | 'partial'
+  updated?: Array<{ path: string; branchName: string; stdout?: string; stderr?: string }>
+  failed?: Array<{ path: string; message: string }>
+  workspace?: LocalWorkspace
+}
+
 export async function ensureWorkspace(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
@@ -64,6 +83,25 @@ export async function openDocumentRegion(issue: Issue) {
   appendIssueParams(params, issue)
 
   return request<OpenDocumentRegionResult>(`/task/${issue.id}/document-region/open?${params.toString()}`, {
+    method: 'POST',
+  })
+}
+
+export async function syncDemandIdentity(issue: Issue, identity: DemandIdentity) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<SyncDemandIdentityResult>(`/task/${issue.id}/identity/sync?${params.toString()}`, {
+    method: 'POST',
+    body: { identity },
+  })
+}
+
+export async function updateCode(issue: Issue) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<UpdateCodeResult>(`/task/${issue.id}/code/update?${params.toString()}`, {
     method: 'POST',
   })
 }

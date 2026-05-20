@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FileTextOutlined, FolderOpenOutlined, UploadOutlined } from '@ant-design/icons'
-import { Button, FloatButton, message, Modal, Steps } from 'antd'
+import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, UploadOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { Button, FloatButton, message, Modal, Radio, Steps } from 'antd'
 import { useParams } from 'react-router-dom'
-import { PrimaryButton } from '../components/Button'
 import { Pill } from '../components/Pill'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
 import { useAppTheme } from '../providers/themeContext'
 import { issueService, taskService, type DocumentSummary, type FlowStep, type HarnessStatus, type Issue, type IssueTask, type Tone } from '../services'
+import type { DemandIdentity } from '../services/task'
 import { mutedText, pageBand, panel } from '../utils/themeClasses'
 
 const emptyIssue: Issue = {
@@ -17,9 +17,21 @@ const emptyIssue: Issue = {
   status: 1,
 }
 
+const demandIdentityOptions: Array<{ label: string; value: DemandIdentity }> = [
+  { label: '产品', value: 'pm' },
+  { label: '前端', value: 'fe' },
+  { label: '后端', value: 'be' },
+  { label: '测试', value: 'qa' },
+]
+
 // Page: 详情页
 export function DemandDetailPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isIdentityOpen, setIsIdentityOpen] = useState(false)
+  const [currentIdentity, setCurrentIdentity] = useState<DemandIdentity>('pm')
+  const [pendingIdentity, setPendingIdentity] = useState<DemandIdentity>('pm')
+  const [isSyncingIdentity, setIsSyncingIdentity] = useState(false)
+  const [isUpdatingCode, setIsUpdatingCode] = useState(false)
   const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
   const [isUpdatingHarnessStatus, setIsUpdatingHarnessStatus] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
@@ -30,6 +42,7 @@ export function DemandDetailPage() {
   const loadTask = useCallback(() => loadIssueTask(demandId), [demandId])
   const { data: task, error, loading } = useIssueTask(loadTask, reloadKey)
   const { issue, workspace, workspaceError, flowSteps, documents } = task
+  const identityStorageKey = getDemandIdentityStorageKey(demandId || String(issue.id || ''))
   const currentFlowStepIndex = Math.max(
     0,
     flowSteps.findIndex((step) => step.status === 'current'),
@@ -38,6 +51,35 @@ export function DemandDetailPage() {
   const branch = workspace?.branchName || issue.wsBranchName || `task-${issue.id}`
   const workspaceId = workspace ? String(workspace.id) : ''
   const openRawInputPicker = () => rawInputRef.current?.click()
+  useEffect(() => {
+    const storedIdentity = readStoredDemandIdentity(identityStorageKey)
+
+    setCurrentIdentity(storedIdentity)
+    setPendingIdentity(storedIdentity)
+  }, [identityStorageKey])
+
+  const openIdentityDialog = () => {
+    setPendingIdentity(currentIdentity)
+    setIsIdentityOpen(true)
+  }
+  const switchDemandIdentity = async (identity: DemandIdentity) => {
+    await taskService.syncDemandIdentity(issue, identity)
+    setCurrentIdentity(identity)
+    window.localStorage.setItem(identityStorageKey, identity)
+  }
+  const confirmIdentitySwitch = async () => {
+    setIsSyncingIdentity(true)
+
+    try {
+      await switchDemandIdentity(pendingIdentity)
+      messageApi.success(`已切换为${getDemandIdentityLabel(pendingIdentity)}身份`)
+      setIsIdentityOpen(false)
+    } catch (switchError) {
+      messageApi.error(switchError instanceof Error ? switchError.message : '切换身份失败')
+    } finally {
+      setIsSyncingIdentity(false)
+    }
+  }
   const updateHarnessStatus = async (harnessStatus: HarnessStatus) => {
     if (!issue.id) {
       return
@@ -58,7 +100,7 @@ export function DemandDetailPage() {
   const openDocumentRegion = async () => {
     Modal.info({
       title: '打开文档区',
-      content: '当前打开该需求在本机工作区中的文档目录。',
+      content: '当前打开该需求在本机工作区中的子工程目录。',
       okText: '打开',
       async onOk() {
         try {
@@ -69,6 +111,27 @@ export function DemandDetailPage() {
         }
       },
     })
+  }
+
+  const updateCode = async () => {
+    setIsUpdatingCode(true)
+
+    try {
+      const result = await taskService.updateCode(issue)
+      const failedCount = result.failed?.length ?? 0
+
+      if (failedCount > 0) {
+        messageApi.warning(`代码已部分更新，${failedCount} 个仓库失败`)
+      } else {
+        messageApi.success('代码已更新')
+      }
+
+      setReloadKey((value) => value + 1)
+    } catch (updateError) {
+      messageApi.error(updateError instanceof Error ? updateError.message : '更新代码失败')
+    } finally {
+      setIsUpdatingCode(false)
+    }
   }
 
   const uploadRawInput = async (file: File | undefined) => {
@@ -129,9 +192,13 @@ export function DemandDetailPage() {
           isDark={isDark}
           canUploadRawInput={canUploadRawInput}
           isUploadingRawInput={isUploadingRawInput}
+          isUpdatingCode={isUpdatingCode}
           loading={loading}
+          currentIdentity={currentIdentity}
           onOpenDetail={() => setIsDetailOpen(true)}
           onOpenDocumentRegion={openDocumentRegion}
+          onOpenIdentity={openIdentityDialog}
+          onUpdateCode={updateCode}
           onUploadRawInput={openRawInputPicker}
         />
         <WorkflowRegion
@@ -156,6 +223,24 @@ export function DemandDetailPage() {
       />
 
       <DetailDialog issue={issue} workspacePath={workspace?.workspacePath} branch={branch} open={isDetailOpen} onClose={() => setIsDetailOpen(false)} />
+      <Modal
+        title="切换身份"
+        open={isIdentityOpen}
+        confirmLoading={isSyncingIdentity}
+        okText="切换"
+        cancelText="取消"
+        onOk={() => void confirmIdentitySwitch()}
+        onCancel={() => setIsIdentityOpen(false)}
+      >
+        <Radio.Group
+          className="grid gap-2"
+          optionType="button"
+          buttonStyle="solid"
+          options={demandIdentityOptions}
+          value={pendingIdentity}
+          onChange={(event) => setPendingIdentity(event.target.value as DemandIdentity)}
+        />
+      </Modal>
       <FloatButton
         tooltip="打开代码页"
         className="lg:hidden"
@@ -170,18 +255,26 @@ function DemandInfoRegion({
   isDark,
   canUploadRawInput,
   isUploadingRawInput,
+  isUpdatingCode,
   loading,
+  currentIdentity,
   onOpenDetail,
   onOpenDocumentRegion,
+  onOpenIdentity,
+  onUpdateCode,
   onUploadRawInput,
 }: {
   issue: Issue
   isDark: boolean
   canUploadRawInput: boolean
   isUploadingRawInput: boolean
+  isUpdatingCode: boolean
   loading: boolean
+  currentIdentity: DemandIdentity
   onOpenDetail: () => void
   onOpenDocumentRegion: () => void
+  onOpenIdentity: () => void
+  onUpdateCode: () => void
   onUploadRawInput: () => void
 }) {
   // Region: 信息区
@@ -195,22 +288,46 @@ function DemandInfoRegion({
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
+          <Button size="small" icon={<FolderOpenOutlined />} onClick={onOpenDocumentRegion} className="text-xs font-extrabold">
+            打开文档区
+          </Button>
+          <Button size="small" icon={<UserSwitchOutlined />} onClick={onOpenIdentity} className="text-xs font-extrabold">
+            {getDemandIdentityLabel(currentIdentity)}
+          </Button>
+          <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingCode} onClick={onUpdateCode} className="text-xs font-extrabold">
+            更新代码
+          </Button>
+          <Button type="primary" size="small" onClick={onOpenDetail} className="text-xs font-extrabold">
+            <FileTextOutlined />
+            查看详情
+          </Button>
           {canUploadRawInput && (
-            <Button icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput} className="text-xs font-extrabold">
+            <Button size="small" icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput} className="text-xs font-extrabold">
               上传原始需求
             </Button>
           )}
-          <Button icon={<FolderOpenOutlined />} onClick={onOpenDocumentRegion} className="text-xs font-extrabold">
-            打开文档区
-          </Button>
-          <PrimaryButton onClick={onOpenDetail}>
-            <FileTextOutlined />
-            查看详情
-          </PrimaryButton>
         </div>
       </div>
     </section>
   )
+}
+
+function getDemandIdentityLabel(identity: DemandIdentity) {
+  return demandIdentityOptions.find((option) => option.value === identity)?.label ?? '产品'
+}
+
+function getDemandIdentityStorageKey(demandId: string) {
+  return `ai-workbench:demand-identity:${demandId || 'unknown'}`
+}
+
+function readStoredDemandIdentity(storageKey: string): DemandIdentity {
+  const storedValue = window.localStorage.getItem(storageKey)
+
+  return isDemandIdentity(storedValue) ? storedValue : 'pm'
+}
+
+function isDemandIdentity(value: string | null): value is DemandIdentity {
+  return demandIdentityOptions.some((option) => option.value === value)
 }
 
 function WorkflowRegion({
