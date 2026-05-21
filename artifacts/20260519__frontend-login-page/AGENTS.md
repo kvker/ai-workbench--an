@@ -2,7 +2,7 @@
 
 ## 任务概述
 
-为 `projects/app` 增加登录页，接入 devops `/user/login` 接口，并用本地登录态保护工作台页面。
+为 `repos/app` 增加登录页，接入 devops `/user/login` 接口，并用本地登录态保护工作台页面。
 
 ## 产出索引
 

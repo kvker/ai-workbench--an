@@ -1,6 +1,6 @@
 # 原始输入
 
-/Users/zweizhao/project/current/ai-workbench--an/projects/service/.env
+/Users/zweizhao/project/current/ai-workbench--an/repos/service/.env
 
 我在这里提供了 TEMPLATE_REPO_URL 和 TEMPLATE_ROOT_DIR
 

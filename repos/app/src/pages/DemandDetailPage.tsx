@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, UploadOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { Button, FloatButton, message, Modal, Radio, Steps } from 'antd'
 import { useParams } from 'react-router-dom'
 import { Pill } from '../components/Pill'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
 import { useAppTheme } from '../providers/themeContext'
-import { issueService, taskService, type DocumentSummary, type FlowStep, type HarnessStatus, type Issue, type IssueTask, type Tone } from '../services'
+import { issueService, taskService, type DocumentSummary, type FlowStep, type HarnessStatus, type Issue, type IssueTask } from '../services'
 import type { DemandIdentity } from '../services/task'
 import { mutedText, pageBand, panel } from '../utils/themeClasses'
 
@@ -35,6 +35,8 @@ export function DemandDetailPage() {
   const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
   const [isUpdatingHarnessStatus, setIsUpdatingHarnessStatus] = useState(false)
   const [isAnalyzingPmRaw, setIsAnalyzingPmRaw] = useState(false)
+  const [activeCodexSessionId, setActiveCodexSessionId] = useState<string | undefined>(undefined)
+  const [codexSessionSwitchKey, setCodexSessionSwitchKey] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
   const rawInputRef = useRef<HTMLInputElement>(null)
   const { demandId = '' } = useParams()
@@ -144,6 +146,13 @@ export function DemandDetailPage() {
 
     try {
       const result = await taskService.startPmRawAnalysis(issue)
+      const sessionId = result.session?.id
+
+      if (sessionId) {
+        setActiveCodexSessionId(sessionId)
+        setCodexSessionSwitchKey((value) => value + 1)
+      }
+
       messageApi.success(`需求分析已启动，读取 ${result.inputFileCount} 个原始需求文件`)
       setReloadKey((value) => value + 1)
     } catch (analysisError) {
@@ -234,6 +243,7 @@ export function DemandDetailPage() {
       </aside>
 
       <CodexConversationModule
+        activeSessionId={activeCodexSessionId}
         branch={branch}
         demandId={String(issue.id)}
         disabled={loading || !workspaceId}
@@ -241,6 +251,7 @@ export function DemandDetailPage() {
         initializationError={workspaceError}
         workspaceId={workspaceId}
         workspacePath={workspace?.workspacePath}
+        sessionSwitchKey={codexSessionSwitchKey}
       />
 
       <DetailDialog issue={issue} workspacePath={workspace?.workspacePath} branch={branch} open={isDetailOpen} onClose={() => setIsDetailOpen(false)} />
@@ -407,7 +418,6 @@ function WorkflowRegion({
                 onUploadRawInput={onUploadRawInput}
               />
             ),
-            content: step.state,
             status: step.status === 'done' ? 'finish' : step.status === 'current' ? 'process' : 'wait',
           }))}
         />
@@ -475,17 +485,17 @@ function WorkflowStepTitle({
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+    <div className="grid min-w-0 gap-2">
       <span className="truncate text-sm font-extrabold">{step.title}</span>
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap gap-2">
         {isRequirementAnalysis && canUploadRawInput && (
-          <Button size="small" icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput}>
-            上传原始需求
+          <Button size="small" loading={isUploadingRawInput} onClick={onUploadRawInput}>
+            上传需求
           </Button>
         )}
         {isRequirementAnalysis && (
           <Button size="small" loading={isAnalyzingPmRaw} onClick={onAnalyzePmRaw}>
-            需求分析
+            分析
           </Button>
         )}
         {canComplete && (
@@ -515,13 +525,18 @@ function WorkflowStepTitle({
 function ArtifactRegion({ documents, isDark }: { documents: DocumentSummary[]; isDark: boolean }) {
   // Region: 产物区
   return (
-    <section className={`min-h-0 overflow-hidden rounded-lg border ${panel(isDark)}`}>
+    <section className={`grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border ${panel(isDark)}`}>
       <div className="p-3">
         <PanelHead title="当前产物" action={`${documents.length} docs`} />
       </div>
       <div className="min-h-0 overflow-auto px-3 pb-3">
+        {documents.length === 0 && (
+          <div className={`border-t border-slate-500/15 py-3 text-xs font-bold ${mutedText(isDark)}`}>
+            暂无输出产物
+          </div>
+        )}
         {documents.map((document) => (
-          <QuickDoc key={document.title} title={document.title} body={document.body} tone={document.tone} />
+          <QuickDoc key={document.title} title={document.title} body={document.body} />
         ))}
       </div>
     </section>
@@ -570,16 +585,15 @@ function DetailDialog({
   )
 }
 
-function QuickDoc({ title, body, tone }: { title: string; body: string; tone: Tone }) {
+function QuickDoc({ title, body }: { title: string; body: string }) {
   const { isDark } = useAppTheme()
 
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-3 border-t border-slate-500/15 py-3 first:border-t-0">
+    <div className="border-t border-slate-500/15 py-3 first:border-t-0">
       <div>
-        <div className="text-xs font-extrabold">{title}</div>
+        <div className="break-words text-xs font-extrabold">{title}</div>
         <p className={`mt-1 text-xs leading-relaxed ${mutedText(isDark)}`}>{body}</p>
       </div>
-      <Pill tone={tone}>{tone === 'cyan' ? '当前' : '完成'}</Pill>
     </div>
   )
 }
@@ -631,9 +645,10 @@ function useIssueTask(loader: () => Promise<IssueTask>, reloadKey: number) {
 
 async function loadIssueTask(issueId: string): Promise<IssueTask> {
   const issue = await issueService.detail(issueId)
-  const [boardResult, workspaceResult] = await Promise.allSettled([
+  const [boardResult, workspaceResult, artifactsResult] = await Promise.allSettled([
     issueService.issueBoard(issueId),
     taskService.ensureWorkspace(issue),
+    taskService.listWorkspaceArtifacts(issue),
   ])
   const board = boardResult.status === 'fulfilled' && boardResult.value.id ? boardResult.value : undefined
   const workspace = workspaceResult.status === 'fulfilled' ? workspaceResult.value : undefined
@@ -650,7 +665,7 @@ async function loadIssueTask(issueId: string): Promise<IssueTask> {
     workspace,
     workspaceError,
     flowSteps: createFlowSteps(displayIssue),
-    documents: createDocuments(displayIssue),
+    documents: artifactsResult.status === 'fulfilled' ? createArtifactDocuments(artifactsResult.value.files) : [],
   }
 }
 
@@ -685,22 +700,28 @@ function getIssueFlowTitle(issue: Issue) {
   return issue.issueStatusDesc || issueService.issueStatusTitles[issue.status]
 }
 
-function createDocuments(issue: Issue): DocumentSummary[] {
-  return [
-    createDocument('产品需求', issue.prd, 'cyan'),
-    createDocument('提测文档', issue.commitTestDoc, 'green'),
-    createDocument('发布计划', issue.integrationPlanDoc, 'blue'),
-  ].filter((document): document is DocumentSummary => Boolean(document))
+function createArtifactDocuments(files: taskService.WorkspaceArtifactFile[]): DocumentSummary[] {
+  return files.map((file) => ({
+    title: file.title,
+    body: `${file.node} / ${formatFileSize(file.size)}${file.updatedAt ? ` / ${formatDateTime(file.updatedAt)}` : ''}`,
+    path: file.path,
+    node: file.node,
+    tone: 'cyan',
+  }))
 }
 
-function createDocument(title: string, body: string | undefined, tone: Tone) {
-  if (!body) {
-    return null
+function formatFileSize(size: number) {
+  if (size < 1024) {
+    return `${size} B`
   }
 
-  return {
-    title,
-    body,
-    tone,
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
   }
+
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString()
 }

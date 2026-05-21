@@ -2,7 +2,7 @@
 
 ## 变更摘要
 
-- 在 `projects/app` 添加 Tailwind CSS 相关依赖。
+- 在 `repos/app` 添加 Tailwind CSS 相关依赖。
 - 在 `vite.config.ts` 接入 `@tailwindcss/vite`。
 - 在 `src/index.css` 引入 Tailwind，并通过 `@source "./**/*.{ts,tsx}"` 显式声明扫描源文件。
 - 将 Vite 默认页面替换为 AI 工作台原型，包含：

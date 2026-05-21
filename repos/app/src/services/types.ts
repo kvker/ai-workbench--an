@@ -12,6 +12,8 @@ export type DocumentSummary = {
   title: string
   body: string
   tone: Tone
+  path?: string
+  node?: string
 }
 
 export type AuthType = 0 | 1

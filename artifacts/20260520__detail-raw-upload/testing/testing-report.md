@@ -2,25 +2,25 @@
 
 ## 验证项
 
-- `projects/app`: `npm run build`
+- `repos/app`: `npm run build`
   - 结果：通过。
   - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次功能。
-- `projects/service`: `node -c src/routes/task.js`
+- `repos/service`: `node -c src/routes/task.js`
   - 结果：通过。
 - 2026-05-20 文档区目录修正验证：
-  - `projects/service`: `node -c src/routes/task.js`
+  - `repos/service`: `node -c src/routes/task.js`
     - 结果：通过。
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次修正。
 - 2026-05-20 身份切换入口验证：
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次入口新增。
 - 2026-05-20 身份切换同步验证：
-  - `projects/service`: `node -c src/services/knowledgeSyncService.js && node -c src/routes/task.js`
+  - `repos/service`: `node -c src/services/knowledgeSyncService.js && node -c src/routes/task.js`
     - 结果：通过。
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次同步接入。
   - 临时 git 知识库 + 临时工作区调用 `syncKnowledgeForIdentity({ identity: 'pm' })`
@@ -30,27 +30,44 @@
     - 结果：通过。
     - 备注：返回 `partial` 与 2 个 missing，shared skills 与 shared agents 仍复制成功。
 - 2026-05-20 更新代码入口验证：
-  - `projects/service`: `node -c src/services/codeUpdateService.js && node -c src/routes/task.js`
+  - `repos/service`: `node -c src/services/codeUpdateService.js && node -c src/routes/task.js`
     - 结果：通过。
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次入口新增。
   - 临时工作区根仓库 + `repos/app` 仓库调用 `updateWorkspaceCode`
     - 结果：通过。
     - 备注：两个仓库均按当前分支执行更新，文件内容从 `v1` 更新到远端 `v2`。
 - 2026-05-20 信息区按钮样式与顺序验证：
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次样式调整。
 - 2026-05-20 流程区需求分析动作验证：
-  - `projects/service`: `node -c src/services/pmRawAnalysisService.js && node -c src/routes/task.js`
+  - `repos/service`: `node -c src/services/pmRawAnalysisService.js && node -c src/routes/task.js`
     - 结果：通过。
-  - `projects/app`: `npm run build`
+  - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次流程区交互。
   - 临时工作区调用 `startPmRawAnalysis` 验证缺失边界
     - 结果：通过。
     - 备注：缺 `.codex/skills/pm-raw` 返回“pm-raw skill 不存在”，input 目录为空返回“原始需求目录为空”。
+- 2026-05-20 Codex 会话体验验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：新增 `react-markdown` 依赖；Vite 输出 chunk size warning，为既有包体积提示，不影响本次体验优化。
+- 2026-05-20 产物区与流程区按钮调整验证：
+  - `repos/service`: `node -c src/routes/task.js`
+    - 结果：通过。
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次展示调整。
+- 2026-05-20 产物区滚动与流程按钮布局验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次布局修正。
+- 2026-05-20 产物区隐藏文件过滤验证：
+  - `repos/service`: `node -c src/routes/task.js`
+    - 结果：通过。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。

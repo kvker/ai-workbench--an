@@ -27,8 +27,8 @@
 
 ### 技术栈
 
-- `projects/app`：React 19、TypeScript、Vite、ESLint、npm。
-- `projects/service`：Node.js、Express 5、CommonJS、npm。
+- `repos/app`：React 19、TypeScript、Vite、ESLint、npm。
+- `repos/service`：Node.js、Express 5、CommonJS、npm。
 
 ### 关键链接
 
@@ -56,14 +56,14 @@
 | [background](background/) | 静态背景知识 | 只读，了解领域知识 |
 | [conventions](conventions/) | 项目约定规范 | 开始任务前按需读取，作为行为约束 |
 | [artifacts](artifacts/) | 任务产出目录 | 频繁读写，跟踪任务产出 |
-| [projects](projects/) | 实际工程项目 | 实现阶段才访问，每个子目录为一个独立工程 |
+| [repos](repos/) | 实际工程项目 | 实现阶段才访问，每个子目录为一个独立工程 |
 
 ## 根工程与子工程关系
 
 - 根工程是 AI Native 工作区，只管理 `background/`、`conventions/`、`artifacts/`、`.agents/` 等 AI 协作资产。
-- `projects/` 下的每个一级子目录都是一个独立工程，可能拥有自己的 Git 仓库、依赖、构建命令和发布流程。
-- 根工程与 `projects/` 子工程没有 Git 从属关系；根工程通常通过 ignore 规则忽略子工程代码，避免把独立工程误纳入根仓库。
-- 修改产品代码时进入对应 `projects/{工程名}/` 处理；修改 AI Native 规范、技能、背景或任务产物时才处理根工程。
+- `repos/` 下的每个一级子目录都是一个独立工程，可能拥有自己的 Git 仓库、依赖、构建命令和发布流程。
+- 根工程与 `repos/` 子工程没有 Git 从属关系；根工程通常通过 ignore 规则忽略子工程代码，避免把独立工程误纳入根仓库。
+- 修改产品代码时进入对应 `repos/{工程名}/` 处理；修改 AI Native 规范、技能、背景或任务产物时才处理根工程。
 
 ## 约定
 

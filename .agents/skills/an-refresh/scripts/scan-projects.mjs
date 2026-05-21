@@ -3,14 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 const args = parseArgs(process.argv.slice(2));
-const root = path.resolve(args.root || "projects");
+const root = path.resolve(args.root || "repos");
 const artifactsRoot = path.resolve(args.artifacts || "artifacts");
 const format = args.format || (args.write ? "json" : "markdown");
 
 const summary = {
   schemaVersion: 1,
   root: rel(root),
-  projects: scanProjects(root),
+  repos: scanrepos(root),
   artifactsTesting: scanArtifactsTesting(artifactsRoot),
 };
 
@@ -39,7 +39,7 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function scanProjects(rootDir) {
+function scanrepos(rootDir) {
   if (!fs.existsSync(rootDir)) return [];
   return fs
     .readdirSync(rootDir, { withFileTypes: true })
@@ -223,8 +223,8 @@ function rel(file) {
 
 function toMarkdown(summary) {
   const lines = ["# Background Scan", ""];
-  if (!summary.projects.length) lines.push("No projects detected.", "");
-  for (const project of summary.projects) {
+  if (!summary.repos.length) lines.push("No repos detected.", "");
+  for (const project of summary.repos) {
     lines.push(`## ${project.name}`, "", `- Path: \`${project.path}\``);
     if (project.package) {
       lines.push(`- Package: \`${project.package.name}\``, `- Scripts: ${Object.keys(project.package.scripts).map((name) => `\`${name}\``).join(", ") || "-"}`);

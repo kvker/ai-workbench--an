@@ -4,7 +4,7 @@
 
 L2 标准开发。
 
-依据：用户已明确方案方向，但改动跨 `projects/app` 与 `projects/service`，涉及公开 service API、前端模块封装和运行权限配置。
+依据：用户已明确方案方向，但改动跨 `repos/app` 与 `repos/service`，涉及公开 service API、前端模块封装和运行权限配置。
 
 ## 第一版目标
 
@@ -99,15 +99,15 @@ type CodexConversationEvent =
 
 | 序号 | 文件路径 | 变更类型 | 说明 |
 |------|----------|----------|------|
-| 1 | `projects/service/src/services/codex/config.js` | 新增 | 读取 Codex 环境配置 |
-| 2 | `projects/service/src/services/codex/sessionStore.js` | 新增 | 内存 session/event store |
-| 3 | `projects/service/src/services/codex/mockAdapter.js` | 新增 | 第一版 mock Codex adapter |
-| 4 | `projects/service/src/services/codex/service.js` | 新增 | Service 业务封装 |
-| 5 | `projects/service/src/routes/codex.js` | 新增 | `/api/codex/*` 路由 |
-| 6 | `projects/service/app.js` | 修改 | 挂载 Codex 路由 |
-| 7 | `projects/app/src/services/codex.ts` | 新增 | 前端 Codex API client |
-| 8 | `projects/app/src/components/codex-conversation/CodexConversationModule.tsx` | 新增 | 独立对话组件 |
-| 9 | `projects/app/src/pages/DemandDetailPage.tsx` | 修改 | 对话区装配新模块 |
+| 1 | `repos/service/src/services/codex/config.js` | 新增 | 读取 Codex 环境配置 |
+| 2 | `repos/service/src/services/codex/sessionStore.js` | 新增 | 内存 session/event store |
+| 3 | `repos/service/src/services/codex/mockAdapter.js` | 新增 | 第一版 mock Codex adapter |
+| 4 | `repos/service/src/services/codex/service.js` | 新增 | Service 业务封装 |
+| 5 | `repos/service/src/routes/codex.js` | 新增 | `/api/codex/*` 路由 |
+| 6 | `repos/service/app.js` | 修改 | 挂载 Codex 路由 |
+| 7 | `repos/app/src/services/codex.ts` | 新增 | 前端 Codex API client |
+| 8 | `repos/app/src/components/codex-conversation/CodexConversationModule.tsx` | 新增 | 独立对话组件 |
+| 9 | `repos/app/src/pages/DemandDetailPage.tsx` | 修改 | 对话区装配新模块 |
 
 ## 测试计划
 

@@ -9,6 +9,6 @@
 - 默认模型是 `gpt-5.5`。
 - 前端 base url 端口是 `3100`，也就是当前启动的 service。
 - workspace root 先使用用户本机路径 `/Users/zweizhao/project/current`，但需要可配置。
-- 已创建 `projects/app/.env.example` 和 `projects/service/.env.example`。
+- 已创建 `repos/app/.env.example` 和 `repos/service/.env.example`。
 
 用户明确要求使用 `/an-task` 开始实现。

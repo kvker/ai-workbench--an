@@ -2,7 +2,7 @@
 
 ## 任务概述
 
-在 `projects/app` 初始化前端服务层：保留未来真实请求入口 `http.ts`，当前业务数据由 `workspace` 和 `task` 服务基于本地 mock 数据提供。
+在 `repos/app` 初始化前端服务层：保留未来真实请求入口 `http.ts`，当前业务数据由 `workspace` 和 `task` 服务基于本地 mock 数据提供。
 
 ## 产出索引
 

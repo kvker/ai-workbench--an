@@ -2,7 +2,7 @@
 
 ## 任务概述
 
-为 `projects/app` 添加 Tailwind CSS，并参考 `/Users/zweizhao/Documents/harness-workbench-prototype` 快速实现 AI 工作台前端原型。
+为 `repos/app` 添加 Tailwind CSS，并参考 `/Users/zweizhao/Documents/harness-workbench-prototype` 快速实现 AI 工作台前端原型。
 
 ## 产出索引
 

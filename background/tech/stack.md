@@ -17,7 +17,7 @@
 | ESLint | ^10.3.0 | 代码检查 |
 | npm | package-lock.json | 包管理 |
 
-来源：`projects/app/package.json`、`projects/app/package-lock.json`。
+来源：`repos/app/package.json`、`repos/app/package-lock.json`。
 
 ## service
 
@@ -28,24 +28,24 @@
 | CommonJS | 待确认 | 模块格式 |
 | npm | package-lock.json | 包管理 |
 
-来源：`projects/service/package.json`、`projects/service/app.js`、`projects/service/package-lock.json`。
+来源：`repos/service/package.json`、`repos/service/app.js`、`repos/service/package-lock.json`。
 
 ## 工具链
 
 | 工具 | 用途 |
 |------|------|
-| npm run dev | `projects/app` 前端开发服务 |
-| npm run build | `projects/app` 前端构建 |
-| npm run lint | `projects/app` 代码检查 |
-| npm run preview | `projects/app` 构建产物预览 |
-| node app.js | `projects/service` 当前服务启动方式 |
+| npm run dev | `repos/app` 前端开发服务 |
+| npm run build | `repos/app` 前端构建 |
+| npm run lint | `repos/app` 代码检查 |
+| npm run preview | `repos/app` 构建产物预览 |
+| node app.js | `repos/service` 当前服务启动方式 |
 
-来源：`projects/app/package.json`、`projects/service/AGENTS.md`、`.agents/recipes.json`。
+来源：`repos/app/package.json`、`repos/service/AGENTS.md`、`.agents/recipes.json`。
 
 ## 命令覆盖情况
 
-- `projects/app`：已识别 `build` 和 `lint`；测试、独立类型检查、代码生成命令缺失。
-- `projects/service`：未识别到 npm scripts；测试、构建、代码检查、类型检查、代码生成命令缺失。
+- `repos/app`：已识别 `build` 和 `lint`；测试、独立类型检查、代码生成命令缺失。
+- `repos/service`：未识别到 npm scripts；测试、构建、代码检查、类型检查、代码生成命令缺失。
 
 来源：`.agents/recipes.json`。
 

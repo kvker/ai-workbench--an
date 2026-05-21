@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "root": "projects",
-  "projects": [
+  "root": "repos",
+  "repos": [
     {
       "name": "app",
-      "path": "projects/app",
+      "path": "repos/app",
       "kind": "react",
       "recipes": [
         {
           "id": "lint",
           "purpose": "lint",
           "command": "npm run lint",
-          "cwd": "projects/app",
+          "cwd": "repos/app",
           "confidence": "high",
           "source": "package.json scripts.lint"
         },
@@ -19,7 +19,7 @@
           "id": "build",
           "purpose": "build",
           "command": "npm run build",
-          "cwd": "projects/app",
+          "cwd": "repos/app",
           "confidence": "high",
           "source": "package.json scripts.build"
         }
@@ -27,7 +27,7 @@
     },
     {
       "name": "service",
-      "path": "projects/service",
+      "path": "repos/service",
       "kind": "express",
       "recipes": []
     }

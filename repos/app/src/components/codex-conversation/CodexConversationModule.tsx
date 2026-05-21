@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Spin } from 'antd'
 import { PauseCircleOutlined, SendOutlined } from '@ant-design/icons'
+import ReactMarkdown from 'react-markdown'
 import { Avatar } from '../Avatar'
 import { IconButton } from '../Button'
 import {
@@ -27,6 +28,8 @@ export type CodexConversationModuleProps = {
   disabled?: boolean
   initializationError?: string
   isDark: boolean
+  activeSessionId?: string
+  sessionSwitchKey?: number
   onThreadChange?: (threadId: string) => void
   onError?: (error: Error) => void
 }
@@ -41,6 +44,7 @@ type ConversationMessage = {
 const selectedSessionStoragePrefix = 'ai-workbench:selected-codex-session:'
 
 export function CodexConversationModule({
+  activeSessionId,
   apiBaseUrl,
   branch,
   demandId,
@@ -49,6 +53,7 @@ export function CodexConversationModule({
   isDark,
   onError,
   onThreadChange,
+  sessionSwitchKey,
   threadId,
   workspaceId,
   workspacePath,
@@ -62,6 +67,7 @@ export function CodexConversationModule({
   const [streamConnected, setStreamConnected] = useState(false)
   const [sessions, setSessions] = useState<CodexSession[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [commandExpanded, setCommandExpanded] = useState(false)
   const messageListRef = useRef<HTMLDivElement | null>(null)
 
   const handleError = useCallback(
@@ -95,7 +101,7 @@ export function CodexConversationModule({
       try {
         const existingSessions = await listCodexSessions({ demandId, workspaceId }, apiBaseUrl)
         const sortedSessions = [...existingSessions.sessions].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-        const selectedSessionId = readSelectedSessionId(demandId, workspaceId)
+        const selectedSessionId = activeSessionId || readSelectedSessionId(demandId, workspaceId)
         const existingSession = sortedSessions.find((currentSession) => currentSession.id === selectedSessionId) ?? sortedSessions[0]
         const nextSession = existingSession ?? await createCodexSession(
           {
@@ -138,7 +144,7 @@ export function CodexConversationModule({
     return () => {
       ignore = true
     }
-  }, [apiBaseUrl, branch, demandId, disabled, handleError, initializationError, onThreadChange, threadId, workspaceId, workspacePath])
+  }, [activeSessionId, apiBaseUrl, branch, demandId, disabled, handleError, initializationError, onThreadChange, sessionSwitchKey, threadId, workspaceId, workspacePath])
 
   useEffect(() => {
     if (!session || (session.status !== 'running' && Date.now() > pollUntil)) {
@@ -222,8 +228,16 @@ export function CodexConversationModule({
   const messages = useMemo(() => toConversationMessages(events), [events])
   const planSteps = useMemo(() => [...events].reverse().find((event) => event.type === 'plan.updated')?.steps ?? [], [events])
   const commandOutputs = useMemo(() => events.filter((event) => event.type === 'command.output' && event.chunk), [events])
+  const activity = useMemo(() => getCodexActivity({ events, isBusy: session?.status === 'running' || sending }), [events, sending, session?.status])
+  const hasErrorEvent = useMemo(() => events.some((event) => event.type === 'error'), [events])
   const isBusy = loading || sending || session?.status === 'running'
   const cannotSend = disabled || isBusy || !draft.trim() || !session
+
+  useEffect(() => {
+    if (hasErrorEvent) {
+      setCommandExpanded(true)
+    }
+  }, [hasErrorEvent])
 
   useEffect(() => {
     const messageList = messageListRef.current
@@ -344,8 +358,16 @@ export function CodexConversationModule({
           {messages.map((message) => (
             <CodexMessageBubble key={message.id} message={message} isDark={isDark} />
           ))}
+          {activity && <CodexActivityBar activity={activity} isDark={isDark} />}
           {!!planSteps.length && <CodexPlanPanel steps={planSteps} isDark={isDark} />}
-          {!!commandOutputs.length && <CodexCommandPanel outputs={commandOutputs} isDark={isDark} />}
+          {!!commandOutputs.length && (
+            <CodexCommandPanel
+              expanded={commandExpanded}
+              outputs={commandOutputs}
+              isDark={isDark}
+              onToggle={() => setCommandExpanded((value) => !value)}
+            />
+          )}
         </div>
 
         <div className={`border-t p-4 ${pageBand(isDark)}`}>
@@ -456,6 +478,36 @@ function upsertEvent(events: CodexConversationEvent[], event: CodexConversationE
   return [...events, event]
 }
 
+function getCodexActivity({ events, isBusy }: { events: CodexConversationEvent[]; isBusy: boolean }) {
+  if (!isBusy) {
+    return null
+  }
+
+  const lastEvent = [...events].reverse().find((event) => ['command.output', 'diff.updated', 'plan.updated', 'message.delta', 'turn.started'].includes(event.type))
+
+  if (!lastEvent) {
+    return 'AI 正在处理...'
+  }
+
+  if (lastEvent.type === 'command.output') {
+    return 'AI 正在执行命令...'
+  }
+
+  if (lastEvent.type === 'diff.updated') {
+    return 'AI 正在更新文件...'
+  }
+
+  if (lastEvent.type === 'plan.updated') {
+    return 'AI 正在规划步骤...'
+  }
+
+  if (lastEvent.type === 'message.delta') {
+    return 'AI 正在回复...'
+  }
+
+  return 'AI 正在处理...'
+}
+
 function readSelectedSessionId(demandId: string, workspaceId: string) {
   return window.localStorage.getItem(getSelectedSessionStorageKey(demandId, workspaceId))
 }
@@ -508,12 +560,21 @@ function CodexMessageBubble({ message, isDark }: { message: ConversationMessage;
     <div className={`mb-4 grid max-w-[860px] gap-3 ${isUser ? 'ml-auto grid-cols-[1fr_32px]' : 'grid-cols-[32px_1fr]'}`}>
       {!isUser && <Avatar label="AI" ai />}
       <div className={`rounded-lg border p-3 text-sm leading-relaxed ${isUser ? toneClass('blue', isDark) : panel(isDark)}`}>
-        <p>
-          {message.text}
+        <div className="max-w-none [&_code]:break-words [&_code]:rounded [&_code]:bg-slate-500/10 [&_code]:px-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_p+p]:mt-2 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:bg-slate-950/80 [&_pre]:p-3 [&_pre]:text-slate-100 [&_ul]:ml-5 [&_ul]:list-disc">
+          <ReactMarkdown>{message.text}</ReactMarkdown>
           {message.streaming && <span className={mutedText(isDark)}>▍</span>}
-        </p>
+        </div>
       </div>
       {isUser && <Avatar label="我" />}
+    </div>
+  )
+}
+
+function CodexActivityBar({ activity, isDark }: { activity: string; isDark: boolean }) {
+  return (
+    <div className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${panelSoft(isDark)}`}>
+      <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" />
+      <span>{activity}</span>
     </div>
   )
 }
@@ -532,13 +593,32 @@ function CodexPlanPanel({ steps, isDark }: { steps: Array<{ text: string; status
   )
 }
 
-function CodexCommandPanel({ outputs, isDark }: { outputs: CodexConversationEvent[]; isDark: boolean }) {
+function CodexCommandPanel({
+  expanded,
+  outputs,
+  isDark,
+  onToggle,
+}: {
+  expanded: boolean
+  outputs: CodexConversationEvent[]
+  isDark: boolean
+  onToggle: () => void
+}) {
   return (
     <div className={`mb-4 overflow-hidden rounded-lg border ${panel(isDark)}`}>
-      <div className={`border-b px-3 py-2 text-xs font-extrabold ${dividerBorder(isDark)}`}>命令输出</div>
-      <pre className={`max-h-48 overflow-auto whitespace-pre-wrap p-3 text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-        {outputs.map((output) => output.chunk).join('\n')}
-      </pre>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-xs font-extrabold ${dividerBorder(isDark)}`}
+      >
+        <span>命令输出 · {outputs.length} 条</span>
+        <span className={mutedText(isDark)}>{expanded ? '收起' : '展开'}</span>
+      </button>
+      {expanded && (
+        <pre className={`max-h-48 overflow-auto whitespace-pre-wrap p-3 text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+          {outputs.map((output) => output.chunk).join('\n')}
+        </pre>
+      )}
     </div>
   )
 }

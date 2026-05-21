@@ -3,9 +3,9 @@
 ## 验证命令
 
 ```bash
-cd projects/app && npm run build
-cd projects/app && npm run lint
-cd projects/service && npm run dev
+cd repos/app && npm run build
+cd repos/app && npm run lint
+cd repos/service && npm run dev
 curl -s http://localhost:3100/api/workspace
 curl -s http://localhost:3100/api/task
 curl -s -X POST http://localhost:3100/api/task/messages -H 'Content-Type: application/json' -d '{"role":"user","author":"PM","body":"本地 JSON 持久化验证消息"}'

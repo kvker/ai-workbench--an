@@ -3,14 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 const args = parseArgs(process.argv.slice(2));
-const root = path.resolve(args.root || "projects");
+const root = path.resolve(args.root || "repos");
 const format = args.format || (args.write ? "json" : "markdown");
 
-const projects = scanProjects(root);
+const repos = scanrepos(root);
 const result = {
   schemaVersion: 1,
   root: path.relative(process.cwd(), root) || ".",
-  projects,
+  repos,
 };
 
 const output = format === "json" ? JSON.stringify(result, null, 2) : toMarkdown(result);
@@ -41,7 +41,7 @@ function parseArgs(argv) {
   return parsed;
 }
 
-function scanProjects(rootDir) {
+function scanrepos(rootDir) {
   if (!fs.existsSync(rootDir)) return [];
   return fs
     .readdirSync(rootDir, { withFileTypes: true })
@@ -194,11 +194,11 @@ function rel(file) {
 
 function toMarkdown(data) {
   const lines = ["# Executable Recipes", ""];
-  if (!data.projects.length) {
-    lines.push("No projects detected.");
+  if (!data.repos.length) {
+    lines.push("No repos detected.");
     return lines.join("\n");
   }
-  for (const project of data.projects) {
+  for (const project of data.repos) {
     lines.push(`## ${project.name}`, "", `- Path: \`${project.path}\``, `- Kind: \`${project.kind}\``, "");
     if (!project.recipes.length) {
       lines.push("No recipes detected.", "");

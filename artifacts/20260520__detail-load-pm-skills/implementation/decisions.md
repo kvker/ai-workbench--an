@@ -11,7 +11,7 @@
 - 当前流程序号优先读取流程节点的 `sequence`、`order`、`index` 或 `stepIndex` 数字字段；旧数据没有序号时使用数组下标兜底。
 - 序号小于 3 时，将 `$KNOWLEDGE_ROOT_DIR/$PM_SKILLS_DIR/{PM_SKILLS}` 中配置的 skill 目录覆盖复制到 `{workspacePath}/.codex/skills/`。
 - `PM_SKILLS_DIR` 默认为 `skills/pm`；该配置必须是 `KNOWLEDGE_ROOT_DIR` 下的相对目录，非法值会回退到默认值。
-- `KNOWLEDGE_ROOT_DIR` 按 service 工程根目录解析；绝对路径直接使用，相对路径以 `projects/service` 为基准。
+- `KNOWLEDGE_ROOT_DIR` 按 service 工程根目录解析；绝对路径直接使用，相对路径以 `repos/service` 为基准。
 - skills 同步失败不再阻断详情页请求，返回 `skillSync.status` 为 `skipped` 或 `partial`，并包含缺失或失败信息。
 - 新建需求默认流程节点补充 `sequence: 0..3`，前端类型同步允许该字段。
 

@@ -32,8 +32,8 @@
 
 ## 依赖
 
-- 当前 `projects/app` React/Vite/Ant Design 实现。
-- 当前 `projects/service` Express 5 实现。
+- 当前 `repos/app` React/Vite/Ant Design 实现。
+- 当前 `repos/service` Express 5 实现。
 - 后续真实接入依赖 OpenAI Codex app-server 协议和本地 `codex` 可执行文件。
 
 ## 涉及模块

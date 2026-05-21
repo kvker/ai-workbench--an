@@ -76,7 +76,21 @@ export type StartPmRawAnalysisResult = {
   rawInputDir: string
   skillPath: string
   inputFileCount: number
-  session?: unknown
+  session?: { id: string; threadId?: string }
+  workspace?: LocalWorkspace
+}
+
+export type WorkspaceArtifactFile = {
+  title: string
+  path: string
+  node: string
+  size: number
+  updatedAt?: string
+}
+
+export type WorkspaceArtifactsResult = {
+  artifactsRoot: string
+  files: WorkspaceArtifactFile[]
   workspace?: LocalWorkspace
 }
 
@@ -123,6 +137,15 @@ export async function startPmRawAnalysis(issue: Issue) {
 
   return request<StartPmRawAnalysisResult>(`/task/${issue.id}/pm-raw/analyze?${params.toString()}`, {
     method: 'POST',
+  })
+}
+
+export async function listWorkspaceArtifacts(issue: Issue) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<WorkspaceArtifactsResult>(`/task/${issue.id}/artifacts?${params.toString()}`, {
+    method: 'GET',
   })
 }
 

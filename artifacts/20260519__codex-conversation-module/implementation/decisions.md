@@ -22,8 +22,8 @@
 
 后续接入点：
 
-- `projects/service/src/services/codex/service.js` 中的 `getAdapter()`。
-- `projects/service/src/services/codex/mockAdapter.js` 的同名方法接口：`startTurn`、`resolveApproval`、`interrupt`。
+- `repos/service/src/services/codex/service.js` 中的 `getAdapter()`。
+- `repos/service/src/services/codex/mockAdapter.js` 的同名方法接口：`startTurn`、`resolveApproval`、`interrupt`。
 
 ### 第一版使用事件快照，不做 SSE/WebSocket
 
@@ -69,7 +69,7 @@
 
 ### 已接入 session/events JSON 持久化
 
-新增 `projects/service/data/codex-sessions.json` 作为当前原型阶段的 Codex session 持久化文件。
+新增 `repos/service/data/codex-sessions.json` 作为当前原型阶段的 Codex session 持久化文件。
 
 实现策略：
 
@@ -87,13 +87,13 @@
 
 ## 涉及文件
 
-- `projects/service/src/routes/codex.js`
-- `projects/service/src/services/codex/config.js`
-- `projects/service/src/services/codex/sessionStore.js`
-- `projects/service/src/services/codex/mockAdapter.js`
-- `projects/service/src/services/codex/service.js`
-- `projects/service/app.js`
-- `projects/app/src/services/codex.ts`
-- `projects/app/src/components/codex-conversation/CodexConversationModule.tsx`
-- `projects/app/src/pages/DemandDetailPage.tsx`
+- `repos/service/src/routes/codex.js`
+- `repos/service/src/services/codex/config.js`
+- `repos/service/src/services/codex/sessionStore.js`
+- `repos/service/src/services/codex/mockAdapter.js`
+- `repos/service/src/services/codex/service.js`
+- `repos/service/app.js`
+- `repos/app/src/services/codex.ts`
+- `repos/app/src/components/codex-conversation/CodexConversationModule.tsx`
+- `repos/app/src/pages/DemandDetailPage.tsx`
 - `background/tech/mock-and-todos.md`

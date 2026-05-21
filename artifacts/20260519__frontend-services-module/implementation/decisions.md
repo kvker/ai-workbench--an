@@ -13,8 +13,8 @@ L1 快速修复。
 
 ## 变更摘要
 
-- 新增 `projects/app/src/services/types.ts`，集中定义工作台服务层类型。
-- 新增 `projects/app/src/services/mock.json` 和 `mockData.ts`，集中维护当前前端 mock 数据。
-- 新增 `projects/app/src/services/http.ts`，作为未来真实 HTTP 请求占位。
+- 新增 `repos/app/src/services/types.ts`，集中定义工作台服务层类型。
+- 新增 `repos/app/src/services/mock.json` 和 `mockData.ts`，集中维护当前前端 mock 数据。
+- 新增 `repos/app/src/services/http.ts`，作为未来真实 HTTP 请求占位。
 - 新增 `workspace.ts` 和 `task.ts`，分别承载工作台列表与任务详情相关服务。
 - 页面和组件改为从 `services` 入口获取类型与数据，不再直接依赖旧 `workbenchData.ts`。

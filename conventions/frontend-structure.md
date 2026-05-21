@@ -4,8 +4,8 @@
 
 | 名词 | 代码入口 | 说明 |
 |------|----------|------|
-| 需求页 | `projects/app/src/pages/DemandBoardPage.tsx` | 展示需求列表、筛选入口和创建需求入口。 |
-| 详情页 | `projects/app/src/pages/DemandDetailPage.tsx` | 单个需求的执行空间，绑定路由参数中的需求 id。 |
+| 需求页 | `repos/app/src/pages/DemandBoardPage.tsx` | 展示需求列表、筛选入口和创建需求入口。 |
+| 详情页 | `repos/app/src/pages/DemandDetailPage.tsx` | 单个需求的执行空间，绑定路由参数中的需求 id。 |
 
 ## 详情页区域
 

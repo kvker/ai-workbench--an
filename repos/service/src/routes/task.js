@@ -25,6 +25,22 @@ router.post('/:issueId/workspace/ensure', async (req, res, next) => {
   }
 });
 
+router.get('/:issueId/artifacts', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+    const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
+    const files = await listArtifactFiles(artifactsRoot);
+
+    res.json({
+      artifactsRoot,
+      files,
+      workspace: toWorkspaceResponse(workspace),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/:issueId/raw-input', express.raw({ type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'], limit: ZIP_BODY_LIMIT }), async (req, res, next) => {
   try {
     const fileName = sanitizeZipFileName(req.query.fileName);
@@ -194,6 +210,54 @@ function parseOverwriteFiles(overwriteFiles = RAW_INPUT_OVERWRITE_FILES) {
   return rawFiles
     .map((fileName) => sanitizeRelativeFilePath(fileName))
     .filter(Boolean);
+}
+
+async function listArtifactFiles(artifactsRoot) {
+  const nodes = await readDirectoryEntries(artifactsRoot);
+  const files = [];
+
+  for (const node of nodes) {
+    if (!node.isDirectory() || node.name.startsWith('.')) {
+      continue;
+    }
+
+    const nodePath = path.join(artifactsRoot, node.name);
+    const entries = await readDirectoryEntries(nodePath);
+
+    for (const entry of entries) {
+      if (!entry.isFile() || entry.name.startsWith('.')) {
+        continue;
+      }
+
+      const filePath = path.join(nodePath, entry.name);
+      const stats = await fs.stat(filePath);
+
+      files.push({
+        title: entry.name,
+        path: filePath,
+        node: node.name,
+        size: stats.size,
+        updatedAt: stats.mtime.toISOString(),
+      });
+    }
+  }
+
+  return files.sort((a, b) => {
+    const byUpdatedAt = String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+    return byUpdatedAt || a.path.localeCompare(b.path);
+  });
+}
+
+async function readDirectoryEntries(targetPath) {
+  try {
+    return await fs.readdir(targetPath, { withFileTypes: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+
+    throw error;
+  }
 }
 
 function sanitizeRelativeFilePath(fileName) {
