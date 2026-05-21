@@ -14,3 +14,4 @@
 - 角色目录按身份值直连：`pm`、`fe`、`be`、`qa` 分别读取 `skills/{role}` 与 `agents/{role}`；复制时不保留角色目录这一层，例如 `skills/pm/xxx` 落到 `.codex/skills/xxx`。缺失角色目录按空处理，shared 目录同样按内容合并到 `.codex/skills` 与 `.codex/agents`。
 - 2026-05-20 增加“更新代码”入口：详情页信息区点击后，service 在需求工作区根仓库与 `repos/` 下一级 git 仓库中分别读取当前分支，并执行 `git pull --rebase origin {current_branch}`；完成后前端刷新详情页数据。
 - 2026-05-20 调整信息区按钮：全部使用 AntD small 尺寸，常驻操作靠前，状态相关的“上传原始需求”放在最后。
+- 2026-05-20 将“上传原始需求”移入流程区“需求分析”节点，并新增“需求分析”动作；service 先检查 `.codex/skills/pm-raw` 和 `{workspacePath}/artifacts/{branchName}/pm-raw/input/` 非空，再创建 Codex 会话并把 input 目录路径作为 pm-raw skill 的执行输入。

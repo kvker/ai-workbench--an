@@ -34,6 +34,7 @@ export function DemandDetailPage() {
   const [isUpdatingCode, setIsUpdatingCode] = useState(false)
   const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
   const [isUpdatingHarnessStatus, setIsUpdatingHarnessStatus] = useState(false)
+  const [isAnalyzingPmRaw, setIsAnalyzingPmRaw] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const rawInputRef = useRef<HTMLInputElement>(null)
   const { demandId = '' } = useParams()
@@ -134,6 +135,24 @@ export function DemandDetailPage() {
     }
   }
 
+  const analyzePmRaw = async () => {
+    if (!issue.id) {
+      return
+    }
+
+    setIsAnalyzingPmRaw(true)
+
+    try {
+      const result = await taskService.startPmRawAnalysis(issue)
+      messageApi.success(`需求分析已启动，读取 ${result.inputFileCount} 个原始需求文件`)
+      setReloadKey((value) => value + 1)
+    } catch (analysisError) {
+      messageApi.error(analysisError instanceof Error ? analysisError.message : '需求分析启动失败')
+    } finally {
+      setIsAnalyzingPmRaw(false)
+    }
+  }
+
   const uploadRawInput = async (file: File | undefined) => {
     if (!file) {
       return
@@ -190,8 +209,6 @@ export function DemandDetailPage() {
         <DemandInfoRegion
           issue={issue}
           isDark={isDark}
-          canUploadRawInput={canUploadRawInput}
-          isUploadingRawInput={isUploadingRawInput}
           isUpdatingCode={isUpdatingCode}
           loading={loading}
           currentIdentity={currentIdentity}
@@ -199,15 +216,19 @@ export function DemandDetailPage() {
           onOpenDocumentRegion={openDocumentRegion}
           onOpenIdentity={openIdentityDialog}
           onUpdateCode={updateCode}
-          onUploadRawInput={openRawInputPicker}
         />
         <WorkflowRegion
           currentFlowStepIndex={currentFlowStepIndex}
+          canUploadRawInput={canUploadRawInput}
           flowSteps={flowSteps}
           issue={issue}
           isDark={isDark}
+          isAnalyzingPmRaw={isAnalyzingPmRaw}
           isUpdatingHarnessStatus={isUpdatingHarnessStatus}
+          isUploadingRawInput={isUploadingRawInput}
+          onAnalyzePmRaw={analyzePmRaw}
           onUpdateHarnessStatus={updateHarnessStatus}
+          onUploadRawInput={openRawInputPicker}
         />
         <ArtifactRegion documents={documents} isDark={isDark} />
       </aside>
@@ -253,8 +274,6 @@ export function DemandDetailPage() {
 function DemandInfoRegion({
   issue,
   isDark,
-  canUploadRawInput,
-  isUploadingRawInput,
   isUpdatingCode,
   loading,
   currentIdentity,
@@ -262,12 +281,9 @@ function DemandInfoRegion({
   onOpenDocumentRegion,
   onOpenIdentity,
   onUpdateCode,
-  onUploadRawInput,
 }: {
   issue: Issue
   isDark: boolean
-  canUploadRawInput: boolean
-  isUploadingRawInput: boolean
   isUpdatingCode: boolean
   loading: boolean
   currentIdentity: DemandIdentity
@@ -275,7 +291,6 @@ function DemandInfoRegion({
   onOpenDocumentRegion: () => void
   onOpenIdentity: () => void
   onUpdateCode: () => void
-  onUploadRawInput: () => void
 }) {
   // Region: 信息区
   return (
@@ -301,11 +316,6 @@ function DemandInfoRegion({
             <FileTextOutlined />
             查看详情
           </Button>
-          {canUploadRawInput && (
-            <Button size="small" icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput} className="text-xs font-extrabold">
-              上传原始需求
-            </Button>
-          )}
         </div>
       </div>
     </section>
@@ -332,18 +342,28 @@ function isDemandIdentity(value: string | null): value is DemandIdentity {
 
 function WorkflowRegion({
   currentFlowStepIndex,
+  canUploadRawInput,
   flowSteps,
   issue,
   isDark,
+  isAnalyzingPmRaw,
   isUpdatingHarnessStatus,
+  isUploadingRawInput,
+  onAnalyzePmRaw,
   onUpdateHarnessStatus,
+  onUploadRawInput,
 }: {
   currentFlowStepIndex: number
+  canUploadRawInput: boolean
   flowSteps: FlowStep[]
   issue: Issue
   isDark: boolean
+  isAnalyzingPmRaw: boolean
   isUpdatingHarnessStatus: boolean
+  isUploadingRawInput: boolean
+  onAnalyzePmRaw: () => void
   onUpdateHarnessStatus: (harnessStatus: HarnessStatus) => void
+  onUploadRawInput: () => void
 }) {
   const stepsScrollRef = useRef<HTMLDivElement>(null)
 
@@ -378,8 +398,13 @@ function WorkflowRegion({
                 currentFlowStepIndex={currentFlowStepIndex}
                 disabled={!issue.id || isUpdatingHarnessStatus}
                 index={index}
+                canUploadRawInput={canUploadRawInput}
+                isAnalyzingPmRaw={isAnalyzingPmRaw}
+                isUploadingRawInput={isUploadingRawInput}
                 step={step}
+                onAnalyzePmRaw={onAnalyzePmRaw}
                 onUpdateHarnessStatus={onUpdateHarnessStatus}
+                onUploadRawInput={onUploadRawInput}
               />
             ),
             content: step.state,
@@ -395,14 +420,24 @@ function WorkflowStepTitle({
   currentFlowStepIndex,
   disabled,
   index,
+  canUploadRawInput,
+  isAnalyzingPmRaw,
+  isUploadingRawInput,
   step,
+  onAnalyzePmRaw,
   onUpdateHarnessStatus,
+  onUploadRawInput,
 }: {
   currentFlowStepIndex: number
   disabled: boolean
   index: number
+  canUploadRawInput: boolean
+  isAnalyzingPmRaw: boolean
+  isUploadingRawInput: boolean
   step: FlowStep
+  onAnalyzePmRaw: () => void
   onUpdateHarnessStatus: (harnessStatus: HarnessStatus) => void
+  onUploadRawInput: () => void
 }) {
   const targetStatus = step.harnessStatus
   const isCurrent = index === currentFlowStepIndex
@@ -410,6 +445,7 @@ function WorkflowStepTitle({
   const nextStatus = issueService.allHarnessStatuses[index + 1]
   const canComplete = isCurrent && nextStatus !== undefined
   const canSwitchBack = isPrevious && targetStatus !== undefined
+  const isRequirementAnalysis = step.harnessStatus === 0
   const confirmComplete = () => {
     Modal.confirm({
       title: `确认完成「${step.title}」？`,
@@ -441,25 +477,37 @@ function WorkflowStepTitle({
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
       <span className="truncate text-sm font-extrabold">{step.title}</span>
-      {canComplete && (
-        <Button
-          size="small"
-          type="primary"
-          loading={disabled}
-          onClick={confirmComplete}
-        >
-          完成
-        </Button>
-      )}
-      {canSwitchBack && (
-        <Button
-          size="small"
-          disabled={disabled}
-          onClick={confirmSwitchBack}
-        >
-          切换
-        </Button>
-      )}
+      <div className="flex flex-wrap justify-end gap-2">
+        {isRequirementAnalysis && canUploadRawInput && (
+          <Button size="small" icon={<UploadOutlined />} loading={isUploadingRawInput} onClick={onUploadRawInput}>
+            上传原始需求
+          </Button>
+        )}
+        {isRequirementAnalysis && (
+          <Button size="small" loading={isAnalyzingPmRaw} onClick={onAnalyzePmRaw}>
+            需求分析
+          </Button>
+        )}
+        {canComplete && (
+          <Button
+            size="small"
+            type="primary"
+            loading={disabled}
+            onClick={confirmComplete}
+          >
+            完成
+          </Button>
+        )}
+        {canSwitchBack && (
+          <Button
+            size="small"
+            disabled={disabled}
+            onClick={confirmSwitchBack}
+          >
+            切换
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

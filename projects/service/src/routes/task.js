@@ -6,6 +6,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 const { updateWorkspaceCode } = require('../services/codeUpdateService');
 const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
+const { startPmRawAnalysis } = require('../services/pmRawAnalysisService');
 const { syncPmSkillsForFlow } = require('../services/skillSyncService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
@@ -113,6 +114,24 @@ router.post('/:issueId/code/update', async (req, res, next) => {
     const result = await updateWorkspaceCode(workspace.workspacePath);
 
     res.json({
+      ...result,
+      workspace: toWorkspaceResponse(workspace),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:issueId/pm-raw/analyze', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+    const result = await startPmRawAnalysis({
+      issueId: req.params.issueId,
+      issueName: req.query.issueName,
+      workspace,
+    });
+
+    res.status(201).json({
       ...result,
       workspace: toWorkspaceResponse(workspace),
     });

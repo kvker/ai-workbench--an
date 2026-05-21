@@ -69,6 +69,17 @@ export type UpdateCodeResult = {
   workspace?: LocalWorkspace
 }
 
+export type StartPmRawAnalysisResult = {
+  status: 'started'
+  issueId: string
+  issueName?: string
+  rawInputDir: string
+  skillPath: string
+  inputFileCount: number
+  session?: unknown
+  workspace?: LocalWorkspace
+}
+
 export async function ensureWorkspace(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
@@ -102,6 +113,15 @@ export async function updateCode(issue: Issue) {
   appendIssueParams(params, issue)
 
   return request<UpdateCodeResult>(`/task/${issue.id}/code/update?${params.toString()}`, {
+    method: 'POST',
+  })
+}
+
+export async function startPmRawAnalysis(issue: Issue) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<StartPmRawAnalysisResult>(`/task/${issue.id}/pm-raw/analyze?${params.toString()}`, {
     method: 'POST',
   })
 }

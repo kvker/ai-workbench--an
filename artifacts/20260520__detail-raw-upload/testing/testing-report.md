@@ -42,6 +42,15 @@
   - `projects/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次样式调整。
+- 2026-05-20 流程区需求分析动作验证：
+  - `projects/service`: `node -c src/services/pmRawAnalysisService.js && node -c src/routes/task.js`
+    - 结果：通过。
+  - `projects/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次流程区交互。
+  - 临时工作区调用 `startPmRawAnalysis` 验证缺失边界
+    - 结果：通过。
+    - 备注：缺 `.codex/skills/pm-raw` 返回“pm-raw skill 不存在”，input 目录为空返回“原始需求目录为空”。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。
