@@ -6,6 +6,8 @@ const { promisify } = require('node:util');
 
 const execFileAsync = promisify(execFile);
 const GIT_TIMEOUT_MS = 30_000;
+const SERVICE_ROOT_DIR = path.resolve(__dirname, '../..');
+const PROJECT_ROOT_DIR = path.resolve(SERVICE_ROOT_DIR, '../..');
 const workspaceLocks = new Map();
 
 class WorkspaceConfigError extends Error {
@@ -89,14 +91,13 @@ function sanitizeWorkspaceUserId(userId) {
 }
 
 function getWorkspacesDir() {
-  const rootDir = process.env.TEMPLATE_ROOT_DIR;
+  const rootDir = process.env.WORKSPACES_ROOT_DIR;
 
-  if (!rootDir) {
-    throw new WorkspaceConfigError('TEMPLATE_ROOT_DIR is not configured.');
+  if (rootDir) {
+    return path.resolve(SERVICE_ROOT_DIR, rootDir);
   }
 
-  const templateRootDir = path.resolve(__dirname, '../..', rootDir);
-  return path.dirname(templateRootDir);
+  return path.join(PROJECT_ROOT_DIR, 'workspaces');
 }
 
 async function ensureWorkspacesDir(workspacesDir) {

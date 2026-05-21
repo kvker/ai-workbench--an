@@ -1,9 +1,12 @@
 const path = require('node:path');
 
+const SERVICE_ROOT_DIR = path.resolve(__dirname, '../../..');
+const PROJECT_ROOT_DIR = path.resolve(SERVICE_ROOT_DIR, '../..');
+
 function getCodexConfig() {
   return {
     appServerBin: process.env.CODEX_APP_SERVER_BIN || 'codex',
-    workspaceRoot: process.env.CODEX_WORKSPACE_ROOT || '/Users/zweizhao/project/current',
+    workspaceRoot: process.env.CODEX_WORKSPACE_ROOT || PROJECT_ROOT_DIR,
     defaultModel: process.env.CODEX_DEFAULT_MODEL || 'gpt-5.5',
     defaultEffort: process.env.CODEX_DEFAULT_EFFORT || 'medium',
     approvalPolicy: process.env.CODEX_APPROVAL_POLICY || 'never',
