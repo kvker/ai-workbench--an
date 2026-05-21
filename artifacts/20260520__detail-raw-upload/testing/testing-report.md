@@ -84,6 +84,18 @@
   - 代码审核后异步边界修正：
     - 结果：通过构建验证。
     - 备注：动态 import 失败与 render 失败均有兜底，cleanup 后不再修改 DOM。
+- 2026-05-21 产物区自动刷新验证：
+  - `repos/service`: `node -c src/routes/task.js`
+    - 结果：通过。
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积与 Mermaid 依赖体积提示，不阻塞本次修复。
+  - 临时模板仓库 + 临时 workspaces 启动 service，调用 artifacts 列表接口：
+    - 结果：通过。
+    - 备注：第一次返回 0 个文件；手动写入 `artifacts/task-pollcase/requirements/requirements.md` 后再次请求返回 1 个文件，节点为 `requirements`。
+  - 代码审核后轮询并发修正：
+    - 结果：通过构建验证。
+    - 备注：上一轮 artifacts 请求未完成时跳过本次 tick，避免乱序响应覆盖新列表。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。

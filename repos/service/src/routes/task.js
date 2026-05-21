@@ -27,7 +27,7 @@ router.post('/:issueId/workspace/ensure', async (req, res, next) => {
 
 router.get('/:issueId/artifacts', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req);
+    const workspace = await prepareIssueWorkspace(req, { syncSkills: false });
     const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
     const files = await listArtifactFiles(artifactsRoot);
 
@@ -43,7 +43,7 @@ router.get('/:issueId/artifacts', async (req, res, next) => {
 
 router.get('/:issueId/artifacts/preview', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req);
+    const workspace = await prepareIssueWorkspace(req, { syncSkills: false });
     const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
     const artifactPath = await resolveArtifactPath(artifactsRoot, req.query.path);
     const stats = await fs.stat(artifactPath);
@@ -182,7 +182,8 @@ router.post('/:issueId/pm-raw/analyze', async (req, res, next) => {
   }
 });
 
-async function prepareIssueWorkspace(req) {
+async function prepareIssueWorkspace(req, options = {}) {
+  const { syncSkills = true } = options;
   const issueId = String(req.params.issueId || '').trim();
 
   if (!issueId) {
@@ -197,10 +198,12 @@ async function prepareIssueWorkspace(req) {
     branch: req.query.branchName,
   }, resolveWorkspaceUserId(req));
 
-  await syncPmSkillsForFlow({
-    flowSteps: [{ sequence: 0, title: '需求新建', status: 'current' }],
-    workspacePath: workspace.workspacePath,
-  });
+  if (syncSkills) {
+    await syncPmSkillsForFlow({
+      flowSteps: [{ sequence: 0, title: '需求新建', status: 'current' }],
+      workspacePath: workspace.workspacePath,
+    });
+  }
 
   return workspace;
 }

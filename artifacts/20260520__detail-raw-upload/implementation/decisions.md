@@ -25,3 +25,6 @@
 - Mermaid 采用动态 import，避免普通详情页加载直接引入 Mermaid 全量解析依赖；只有预览内容包含 Mermaid 代码块时才加载。
 - 2026-05-21 修正 Mermaid 节点文本未显示：关闭 flowchart HTML labels，优先使用 SVG text 渲染文本；同时取消 Mermaid SVG 的二次 DOMPurify 白名单净化，避免 Mermaid 节点 label 结构被剥离。
 - 2026-05-21 根据代码审核修正 Mermaid 异步渲染边界：捕获动态 import 失败，render 失败路径也遵守 effect cleanup guard，并同步设置 root-level `htmlLabels: false`。
+- 2026-05-21 产物区增加自动刷新：详情页加载完成后每 5 秒独立轮询当前需求 artifacts 列表，检测 `{workspacePath}/artifacts/{branchName}/{node}/` 下新增或移动进来的直接文件；轮询失败时保留当前列表，避免短暂错误清空产物区。
+- artifacts 列表和预览接口改为轻量工作区准备，不再在每次读取产物时同步 PM skills，避免自动刷新带来额外副作用。
+- 轮询期间若上一轮 artifacts 请求尚未结束，则跳过本次 tick，避免乱序响应短暂覆盖较新的产物列表。

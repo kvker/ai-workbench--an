@@ -25,6 +25,7 @@ const demandIdentityOptions: Array<{ label: string; value: DemandIdentity }> = [
   { label: '后端', value: 'be' },
   { label: '测试', value: 'qa' },
 ]
+const ARTIFACT_POLL_INTERVAL_MS = 5000
 
 // Page: 详情页
 export function DemandDetailPage() {
@@ -49,7 +50,8 @@ export function DemandDetailPage() {
   const [messageApi, contextHolder] = message.useMessage()
   const loadTask = useCallback(() => loadIssueTask(demandId), [demandId])
   const { data: task, error, loading } = useIssueTask(loadTask, reloadKey)
-  const { issue, workspace, workspaceError, flowSteps, documents } = task
+  const { issue, workspace, workspaceError, flowSteps } = task
+  const { documents } = useArtifactDocuments(issue, task.documents, !loading && !error)
   const identityStorageKey = getDemandIdentityStorageKey(demandId || String(issue.id || ''))
   const currentFlowStepIndex = Math.max(
     0,
@@ -793,6 +795,56 @@ function useIssueTask(loader: () => Promise<IssueTask>, reloadKey: number) {
   }, [loader, reloadKey])
 
   return { data, error, loading }
+}
+
+function useArtifactDocuments(issue: Issue, initialDocuments: DocumentSummary[], enabled: boolean) {
+  const [documents, setDocuments] = useState(initialDocuments)
+
+  useEffect(() => {
+    setDocuments(initialDocuments)
+  }, [initialDocuments])
+
+  useEffect(() => {
+    if (!enabled || !issue.id) {
+      return undefined
+    }
+
+    let active = true
+    let refreshing = false
+
+    const refreshArtifacts = async () => {
+      if (refreshing) {
+        return
+      }
+
+      refreshing = true
+
+      try {
+        const artifacts = await taskService.listWorkspaceArtifacts(issue)
+
+        if (!active) {
+          return
+        }
+
+        setDocuments(createArtifactDocuments(artifacts.files))
+      } catch {
+        // Keep the last visible artifact list; transient polling failures should not blank the panel.
+      } finally {
+        refreshing = false
+      }
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshArtifacts()
+    }, ARTIFACT_POLL_INTERVAL_MS)
+
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [enabled, issue])
+
+  return { documents }
 }
 
 async function loadIssueTask(issueId: string): Promise<IssueTask> {
