@@ -1,5 +1,5 @@
 import { StyleProvider } from '@ant-design/cssinjs'
-import { ConfigProvider, theme } from 'antd'
+import { App as AntdApp, ConfigProvider, theme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { useMemo, useState, type ReactNode } from 'react'
 import { ThemeContext, type ThemeMode } from './themeContext'
@@ -46,7 +46,9 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
             },
           }}
         >
-          {children}
+          <AntdApp>
+            {children}
+          </AntdApp>
         </ConfigProvider>
       </StyleProvider>
     </ThemeContext.Provider>

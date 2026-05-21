@@ -105,6 +105,8 @@
 | [20260520__detail-raw-upload](artifacts/20260520__detail-raw-upload/) | 详情页增加上传原始需求与打开文档区入口 | 活跃 |
 | [20260520__app-style-polish](artifacts/20260520__app-style-polish/) | 优化前端样式、颜色搭配与 AntD 主题一致性 | 活跃 |
 | [20260520__detail-load-pm-skills](artifacts/20260520__detail-load-pm-skills/) | 请求详情页时按流程自动加载 PM skills 到需求工作区 | 活跃 |
+| [20260521__detail-knowledge-role-sync](artifacts/20260521__detail-knowledge-role-sync/) | 详情页按职能加载 skills/conventions 并全量加载 background | 活跃 |
+| [20260521__split-large-frontend-files](artifacts/20260521__split-large-frontend-files/) | 拆分过大的 Codex 对话模块与详情页组件文件 | 活跃 |
 
 ## Skill 路由
 

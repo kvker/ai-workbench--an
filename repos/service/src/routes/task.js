@@ -7,12 +7,23 @@ const { promisify } = require('node:util');
 const { updateWorkspaceCode } = require('../services/codeUpdateService');
 const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
 const { startPmRawAnalysis } = require('../services/pmRawAnalysisService');
-const { syncPmSkillsForFlow } = require('../services/skillSyncService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
 const router = express.Router();
 const ZIP_BODY_LIMIT = '100mb';
 const RAW_INPUT_OVERWRITE_FILES = [];
+const FLOW_STATUS_NODE_MAP = {
+  0: 'pm-raw',
+  1: 'pm-demo',
+  2: 'pm-handoff',
+  3: 'dev-confirm',
+  4: 'coding',
+  5: 'dev-handoff',
+  6: 'qa-confirm',
+  7: 'qa-testing',
+  8: 'qa-handoff',
+  9: 'archive',
+};
 const execFileAsync = promisify(execFile);
 
 router.post('/:issueId/workspace/ensure', async (req, res, next) => {
@@ -27,7 +38,7 @@ router.post('/:issueId/workspace/ensure', async (req, res, next) => {
 
 router.get('/:issueId/artifacts', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req, { syncSkills: false });
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
     const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
     const files = await listArtifactFiles(artifactsRoot);
 
@@ -43,7 +54,7 @@ router.get('/:issueId/artifacts', async (req, res, next) => {
 
 router.get('/:issueId/artifacts/preview', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req, { syncSkills: false });
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
     const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
     const artifactPath = await resolveArtifactPath(artifactsRoot, req.query.path);
     const stats = await fs.stat(artifactPath);
@@ -61,6 +72,25 @@ router.get('/:issueId/artifacts/preview', async (req, res, next) => {
       content,
       size: stats.size,
       updatedAt: stats.mtime.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:issueId/flow/complete-check', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
+    const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
+    const result = await checkFlowCompletionStatus({
+      artifactsRoot,
+      harnessStatus: req.body?.harnessStatus,
+      node: req.body?.node,
+    });
+
+    res.json({
+      ...result,
+      workspace: toWorkspaceResponse(workspace),
     });
   } catch (error) {
     next(error);
@@ -135,7 +165,7 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
 
 router.post('/:issueId/identity/sync', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req);
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
     const result = await syncKnowledgeForIdentity({
       identity: req.body?.identity,
       workspacePath: workspace.workspacePath,
@@ -183,7 +213,7 @@ router.post('/:issueId/pm-raw/analyze', async (req, res, next) => {
 });
 
 async function prepareIssueWorkspace(req, options = {}) {
-  const { syncSkills = true } = options;
+  const { syncKnowledge = true } = options;
   const issueId = String(req.params.issueId || '').trim();
 
   if (!issueId) {
@@ -198,9 +228,9 @@ async function prepareIssueWorkspace(req, options = {}) {
     branch: req.query.branchName,
   }, resolveWorkspaceUserId(req));
 
-  if (syncSkills) {
-    await syncPmSkillsForFlow({
-      flowSteps: [{ sequence: 0, title: '需求新建', status: 'current' }],
+  if (syncKnowledge) {
+    await syncKnowledgeForIdentity({
+      identity: req.query.identity || 'pm',
       workspacePath: workspace.workspacePath,
     });
   }
@@ -254,7 +284,7 @@ async function listArtifactFiles(artifactsRoot) {
     const entries = await readDirectoryEntries(nodePath);
 
     for (const entry of entries) {
-      if (!entry.isFile() || entry.name.startsWith('.')) {
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.md')) {
         continue;
       }
 
@@ -275,6 +305,130 @@ async function listArtifactFiles(artifactsRoot) {
     const byUpdatedAt = String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
     return byUpdatedAt || a.path.localeCompare(b.path);
   });
+}
+
+async function checkFlowCompletionStatus({ artifactsRoot, harnessStatus, node }) {
+  const flowNode = resolveFlowNode({ harnessStatus, node });
+  const nodePath = path.join(artifactsRoot, flowNode);
+  const statusFile = {
+    title: 'raw-status.md',
+    path: path.join(nodePath, 'raw-status.md'),
+    node: flowNode,
+  };
+
+  if (!await isFile(statusFile.path)) {
+    return {
+      allowed: false,
+      node: flowNode,
+      reason: `未找到 ${flowNode}/raw-status.md。`,
+    };
+  }
+
+  const stats = await fs.stat(statusFile.path);
+  const content = await fs.readFile(statusFile.path, 'utf8');
+  const status = extractStatusValue(content);
+  const allowed = status === '已完成';
+
+  return {
+    allowed,
+    node: flowNode,
+    reason: allowed ? undefined : `当前状态为「${status || '未识别'}」，需要状态行为「已完成」后才能完成该节点。`,
+    status,
+    statusFile: {
+      ...statusFile,
+      size: stats.size,
+      updatedAt: stats.mtime.toISOString(),
+      content,
+    },
+  };
+}
+
+function resolveFlowNode({ harnessStatus, node }) {
+  const sanitizedNode = sanitizeArtifactNodeName(node);
+
+  if (sanitizedNode) {
+    return sanitizedNode;
+  }
+
+  const numericStatus = Number(harnessStatus);
+
+  if (Number.isInteger(numericStatus) && FLOW_STATUS_NODE_MAP[numericStatus]) {
+    return FLOW_STATUS_NODE_MAP[numericStatus];
+  }
+
+  const error = new Error('A valid flow node or harnessStatus is required.');
+  error.statusCode = 400;
+  throw error;
+}
+
+function extractStatusValue(content) {
+  if (String(content || '').includes('已完成')) {
+    return '已完成';
+  }
+
+  const lines = String(content || '').split(/\r?\n/);
+
+  for (const line of lines) {
+    const cells = parseMarkdownTableRow(line);
+
+    if (cells.length >= 2 && normalizeStatusCell(cells[0]) === '状态') {
+      return normalizeStatusCell(cells[1]);
+    }
+  }
+
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:[-*]\s*)?(?:状态|status)\s*[:：]\s*(.+?)\s*$/i);
+
+    if (match) {
+      return normalizeStatusCell(match[1]);
+    }
+  }
+
+  return '';
+}
+
+async function isFile(targetPath) {
+  try {
+    const stats = await fs.stat(targetPath);
+    return stats.isFile();
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+
+    return false;
+  }
+}
+
+function parseMarkdownTableRow(line) {
+  const trimmedLine = String(line || '').trim();
+
+  if (!trimmedLine.startsWith('|') || !trimmedLine.endsWith('|')) {
+    return [];
+  }
+
+  return trimmedLine
+    .slice(1, -1)
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function normalizeStatusCell(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^`+|`+$/g, '')
+    .replace(/[*_~]/g, '')
+    .trim();
+}
+
+function sanitizeArtifactNodeName(value) {
+  const node = String(value || '').trim();
+
+  if (!node || node.includes('/') || node.includes('\\') || node.includes('..')) {
+    return '';
+  }
+
+  return node;
 }
 
 async function resolveArtifactPath(artifactsRoot, targetPath) {

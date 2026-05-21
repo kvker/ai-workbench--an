@@ -96,8 +96,25 @@
   - 代码审核后轮询并发修正：
     - 结果：通过构建验证。
     - 备注：上一轮 artifacts 请求未完成时跳过本次 tick，避免乱序响应覆盖新列表。
+- 2026-05-21 产物预览稳定性与 Markdown 文件过滤验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积与 Mermaid 依赖体积提示，不阻塞本次修复。
+  - `repos/service`: `node -c src/routes/task.js`
+    - 结果：通过。
+  - 临时模板仓库 + 临时 workspaces 启动 service，调用 artifacts 列表接口：
+    - 结果：通过。
+    - 备注：`include.md` 与 `.hidden.md` 被返回，`ignore.txt` 被过滤，符合只展示 `*.md` 的规则。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。
   - 第二次返回 `skipped`，同名解包文件跳过。
   - 验证结束后已删除临时测试文件。
+- 2026-05-21 产物区轮询状态隔离验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：父组件不再持有轮询产生的 `documents` state；产物区内部刷新只更新 `ArtifactRegion`。
+- 2026-05-21 产物区 completed 事件刷新验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：移除产物区 interval，新增 Codex turn completed 回调驱动刷新；Vite 保留既有 chunk size warning。

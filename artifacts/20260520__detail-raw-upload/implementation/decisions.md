@@ -28,3 +28,8 @@
 - 2026-05-21 产物区增加自动刷新：详情页加载完成后每 5 秒独立轮询当前需求 artifacts 列表，检测 `{workspacePath}/artifacts/{branchName}/{node}/` 下新增或移动进来的直接文件；轮询失败时保留当前列表，避免短暂错误清空产物区。
 - artifacts 列表和预览接口改为轻量工作区准备，不再在每次读取产物时同步 PM skills，避免自动刷新带来额外副作用。
 - 轮询期间若上一轮 artifacts 请求尚未结束，则跳过本次 tick，避免乱序响应短暂覆盖较新的产物列表。
+- 2026-05-21 修正产物预览中的 Mermaid 图被轮询刷新还原为源码文本：预览弹框打开期间暂停产物列表轮询，并让 Mermaid 渲染 effect 在每次渲染后执行，保证 DOM 被 Markdown HTML 重置后会重新替换 Mermaid 块。
+- 产物区列表改为只展示 `*.md` 文件，不再按隐藏文件等特例点名忽略；非 Markdown 文件不进入产物列表。
+- 2026-05-21 流程节点“完成”增加程序化自检：确认前读取当前节点目录下以 `-status.md` 结尾的状态文件，只解析 `状态` 行是否为 `已完成`；未完成时阻止状态推进，并复用产物预览弹框展示该状态文件。
+- 2026-05-21 产物区轮询状态下沉到 `ArtifactRegion` 内部：详情页父组件只传入初始产物列表、当前需求和轮询开关，轮询触发的 `setDocuments` 不再发生在父组件，避免 5 秒产物刷新推动右侧 Codex 对话区重新执行初始化相关渲染链路。
+- 2026-05-21 产物区刷新从定时轮询改为 AI 完成事件驱动：移除 5 秒 interval，`CodexConversationModule` 新增 `onTurnCompleted` 回调，收到 `turn.completed` 后由详情页递增 `artifactRefreshKey`，产物区按 key 拉取一次最新 artifacts。流程自检的 `onPromptRunCompleted` 继续只处理流程推进逻辑，避免普通聊天完成误触发流程状态检查。

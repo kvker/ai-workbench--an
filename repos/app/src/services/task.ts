@@ -1,7 +1,7 @@
 import { request } from './http'
 import { getStoredToken } from './authStorage'
 import { getWorkspaceUserKey } from './session'
-import type { Issue, LocalWorkspace } from './types'
+import type { HarnessStatus, Issue, LocalWorkspace } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3100/api'
 
@@ -102,9 +102,24 @@ export type WorkspaceArtifactPreview = {
   updatedAt?: string
 }
 
-export async function ensureWorkspace(issue: Issue) {
+export type FlowCompleteCheckResult = {
+  allowed: boolean
+  node: string
+  reason?: string
+  status?: string
+  statusFile?: WorkspaceArtifactFile & {
+    content: string
+  }
+  workspace?: LocalWorkspace
+}
+
+export async function ensureWorkspace(issue: Issue, identity?: DemandIdentity) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
+
+  if (identity) {
+    params.set('identity', identity)
+  }
 
   return request<LocalWorkspace>(`/task/${issue.id}/workspace/ensure?${params.toString()}`, {
     method: 'POST',
@@ -165,6 +180,16 @@ export async function previewWorkspaceArtifact(issue: Issue, artifactPath: strin
 
   return request<WorkspaceArtifactPreview>(`/task/${issue.id}/artifacts/preview?${params.toString()}`, {
     method: 'GET',
+  })
+}
+
+export async function checkFlowComplete(issue: Issue, input: { harnessStatus: HarnessStatus; node?: string }) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<FlowCompleteCheckResult>(`/task/${issue.id}/flow/complete-check?${params.toString()}`, {
+    body: input,
+    method: 'POST',
   })
 }
 

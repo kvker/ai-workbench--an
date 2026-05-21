@@ -5,15 +5,20 @@ const { promisify } = require('node:util');
 
 const execFileAsync = promisify(execFile);
 const GIT_PULL_TIMEOUT_MS = 120_000;
+const knowledgeSyncLocks = new Map();
 
 const ROLE_SOURCE_DIRS = {
-  pm: { skills: 'pm', agents: 'pm' },
-  fe: { skills: 'fe', agents: 'fe' },
-  be: { skills: 'be', agents: 'be' },
-  qa: { skills: 'qa', agents: 'qa' },
+  pm: { aliases: ['pm', 'product', 'pa'], skills: ['pm', 'product', 'pa'], conventions: ['pm', 'product', 'pa'] },
+  fe: { aliases: ['fe', 'frontend'], skills: ['frontend', 'fe'], conventions: ['frontend', 'fe'] },
+  be: { aliases: ['be', 'backend'], skills: ['backend', 'be'], conventions: ['backend', 'be'] },
+  qa: { aliases: ['qa', 'test', 'quality'], skills: ['qa', 'test', 'quality'], conventions: ['qa', 'test', 'quality'] },
 };
 
 async function syncKnowledgeForIdentity({ identity, workspacePath }) {
+  return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeForIdentityUnlocked({ identity, workspacePath }));
+}
+
+async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
   const role = normalizeIdentity(identity);
 
   if (!workspacePath) {
@@ -32,7 +37,7 @@ async function syncKnowledgeForIdentity({ identity, workspacePath }) {
 
   await assertDirectory(knowledgeRootDir, 'KNOWLEDGE_ROOT_DIR does not exist.');
   await assertDirectory(workspacePath, 'Workspace does not exist.');
-  await pullKnowledgeRoot(knowledgeRootDir);
+  await refreshKnowledgeRoot(knowledgeRootDir);
 
   const copied = [];
   const missing = [];
@@ -45,8 +50,11 @@ async function syncKnowledgeForIdentity({ identity, workspacePath }) {
     missing,
   });
 
-  await replaceDirectory({
-    sourcePath: path.join(knowledgeRootDir, 'conventions'),
+  await replaceMergedDirectories({
+    sourceGroups: [
+      createOptionalSourceGroup(knowledgeRootDir, 'conventions', ROLE_SOURCE_DIRS[role].conventions),
+      createOptionalSourceGroup(knowledgeRootDir, 'conventions', ['shared']),
+    ],
     targetPath: path.join(workspacePath, 'conventions'),
     label: 'conventions',
     copied,
@@ -54,23 +62,12 @@ async function syncKnowledgeForIdentity({ identity, workspacePath }) {
   });
 
   await replaceMergedDirectories({
-    sourcePaths: [
-      path.join(knowledgeRootDir, 'skills', ROLE_SOURCE_DIRS[role].skills),
-      path.join(knowledgeRootDir, 'skills', 'shared'),
+    sourceGroups: [
+      createOptionalSourceGroup(knowledgeRootDir, 'skills', ['shared']),
+      createRoleSourceGroup(knowledgeRootDir, 'skills', ROLE_SOURCE_DIRS[role].skills),
     ],
     targetPath: path.join(workspacePath, '.codex', 'skills'),
     label: 'skills',
-    copied,
-    missing,
-  });
-
-  await replaceMergedDirectories({
-    sourcePaths: [
-      path.join(knowledgeRootDir, 'agents', ROLE_SOURCE_DIRS[role].agents),
-      path.join(knowledgeRootDir, 'agents', 'shared'),
-    ],
-    targetPath: path.join(workspacePath, '.codex', 'agents'),
-    label: 'agents',
     copied,
     missing,
   });
@@ -85,16 +82,56 @@ async function syncKnowledgeForIdentity({ identity, workspacePath }) {
   };
 }
 
+async function withKnowledgeSyncLock(workspacePath, task) {
+  const lockKey = path.resolve(String(workspacePath || ''));
+  const previous = knowledgeSyncLocks.get(lockKey) || Promise.resolve();
+  const pending = previous
+    .catch(() => undefined)
+    .then(task)
+    .finally(() => {
+      if (knowledgeSyncLocks.get(lockKey) === pending) {
+        knowledgeSyncLocks.delete(lockKey);
+      }
+    });
+
+  knowledgeSyncLocks.set(lockKey, pending);
+  return pending;
+}
+
 function normalizeIdentity(identity) {
-  const role = String(identity || '').trim();
+  const role = String(identity || '').trim().toLowerCase();
 
   if (Object.hasOwn(ROLE_SOURCE_DIRS, role)) {
     return role;
   }
 
+  for (const [normalizedRole, config] of Object.entries(ROLE_SOURCE_DIRS)) {
+    if (config.aliases.includes(role)) {
+      return normalizedRole;
+    }
+  }
+
   const error = new Error('Unsupported identity.');
   error.statusCode = 400;
   throw error;
+}
+
+function createRoleSourceGroup(knowledgeRootDir, category, dirNames) {
+  return {
+    optional: false,
+    sourcePaths: resolveSourcePaths(knowledgeRootDir, category, dirNames),
+  };
+}
+
+function createOptionalSourceGroup(knowledgeRootDir, category, dirNames) {
+  return {
+    optional: true,
+    sourcePaths: resolveSourcePaths(knowledgeRootDir, category, dirNames),
+  };
+}
+
+function resolveSourcePaths(knowledgeRootDir, category, dirNames) {
+  return [...new Set(dirNames.map((dirName) => path.join(knowledgeRootDir, category, dirName)))];
 }
 
 async function replaceDirectory({ sourcePath, targetPath, label, copied, missing }) {
@@ -106,23 +143,36 @@ async function replaceDirectory({ sourcePath, targetPath, label, copied, missing
   }
 
   await fs.rm(targetPath, { recursive: true, force: true });
-  await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.cp(sourcePath, targetPath, { recursive: true });
+  await fs.mkdir(targetPath, { recursive: true });
+  await copyDirectoryContents(sourcePath, targetPath);
   copied.push({ label, sourcePath, targetPath });
 }
 
-async function replaceMergedDirectories({ sourcePaths, targetPath, label, copied, missing }) {
+async function replaceMergedDirectories({ sourceGroups, targetPath, label, copied, missing }) {
   await fs.rm(targetPath, { recursive: true, force: true });
   await fs.mkdir(targetPath, { recursive: true });
 
-  for (const sourcePath of sourcePaths) {
-    if (!(await isDirectory(sourcePath))) {
-      missing.push({ label, sourcePath });
+  for (const group of sourceGroups) {
+    const existingSourcePaths = [];
+
+    for (const sourcePath of group.sourcePaths) {
+      if (await isDirectory(sourcePath)) {
+        existingSourcePaths.push(sourcePath);
+      }
+    }
+
+    if (existingSourcePaths.length === 0) {
+      if (!group.optional) {
+        missing.push({ label, sourcePath: group.sourcePaths.join(', ') });
+      }
+
       continue;
     }
 
-    await copyDirectoryContents(sourcePath, targetPath);
-    copied.push({ label, sourcePath, targetPath });
+    for (const sourcePath of existingSourcePaths) {
+      await copyDirectoryContents(sourcePath, targetPath);
+      copied.push({ label, sourcePath, targetPath });
+    }
   }
 }
 
@@ -138,16 +188,16 @@ async function copyDirectoryContents(sourcePath, targetPath) {
   }
 }
 
-async function pullKnowledgeRoot(knowledgeRootDir) {
+async function refreshKnowledgeRoot(knowledgeRootDir) {
   try {
-    await execFileAsync('git', ['pull', 'origin', 'main'], {
+    await execFileAsync('git', ['fetch', 'origin', 'main'], {
       cwd: knowledgeRootDir,
       timeout: GIT_PULL_TIMEOUT_MS,
       maxBuffer: 1024 * 1024 * 10,
     });
   } catch (error) {
     if (error.killed && error.signal === 'SIGTERM') {
-      const timeoutError = new Error('Git pull timed out while syncing knowledge root.');
+      const timeoutError = new Error('Git fetch timed out while syncing knowledge root.');
       timeoutError.statusCode = 504;
       throw timeoutError;
     }

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Input, Spin } from 'antd'
+import { Button, Input } from 'antd'
 import { PauseCircleOutlined, SendOutlined } from '@ant-design/icons'
-import ReactMarkdown from 'react-markdown'
-import { Avatar } from '../Avatar'
+import type { TextAreaRef } from 'antd/es/input/TextArea'
 import { IconButton } from '../Button'
 import {
   createCodexSession,
@@ -10,13 +9,30 @@ import {
   getCodexStreamUrl,
   interruptCodexTurn,
   listCodexSessions,
-  renameCodexSession,
   sendCodexTurn,
   type CodexConversationEvent,
   type CodexSession,
 } from '../../services/codex'
-import { dividerBorder, mutedText, pageBand, panel, panelSoft } from '../../utils/themeClasses'
-import { toneClass } from '../../utils/toneClasses'
+import { dividerBorder, pageBand, panel } from '../../utils/themeClasses'
+import {
+  CodexActivityBar,
+  CodexCommandPanel,
+  CodexEmptyState,
+  CodexErrorState,
+  CodexInitializingState,
+  CodexMessageBubble,
+  CodexPlanPanel,
+} from './CodexConversationMessages'
+import { CodexSessionRegion } from './CodexSessionRegion'
+import {
+  getCodexActivity,
+  hasTurnCompleted,
+  isNearScrollBottom,
+  readSelectedSessionId,
+  toConversationMessages,
+  upsertEvent,
+  writeSelectedSessionId,
+} from './codexConversationUtils'
 
 export type CodexConversationModuleProps = {
   demandId: string
@@ -30,29 +46,39 @@ export type CodexConversationModuleProps = {
   isDark: boolean
   activeSessionId?: string
   sessionSwitchKey?: number
+  createSessionRequest?: {
+    key: number
+    alias: string
+    focusInput?: boolean
+  }
+  runPromptRequest?: {
+    key: number
+    alias: string
+    prompt: string
+    focusInput?: boolean
+  }
   onThreadChange?: (threadId: string) => void
+  onPromptRunStarted?: (session: CodexSession) => void
+  onPromptRunCompleted?: (session: CodexSession, events: CodexConversationEvent[]) => void
+  onTurnCompleted?: (session: CodexSession, events: CodexConversationEvent[]) => void
   onError?: (error: Error) => void
 }
-
-type ConversationMessage = {
-  id: string
-  role: 'user' | 'assistant'
-  text: string
-  streaming?: boolean
-}
-
-const selectedSessionStoragePrefix = 'ai-workbench:selected-codex-session:'
 
 export function CodexConversationModule({
   activeSessionId,
   apiBaseUrl,
   branch,
+  createSessionRequest,
   demandId,
   disabled,
   initializationError,
   isDark,
   onError,
+  onPromptRunCompleted,
+  onPromptRunStarted,
   onThreadChange,
+  onTurnCompleted,
+  runPromptRequest,
   sessionSwitchKey,
   threadId,
   workspaceId,
@@ -69,6 +95,13 @@ export function CodexConversationModule({
   const [error, setError] = useState<string | null>(null)
   const [commandExpanded, setCommandExpanded] = useState(false)
   const messageListRef = useRef<HTMLDivElement | null>(null)
+  const draftInputRef = useRef<TextAreaRef | null>(null)
+  const handledCreateSessionRequestKeyRef = useRef(0)
+  const handledRunPromptRequestKeyRef = useRef(0)
+  const pendingPromptRunSessionIdRef = useRef<string | null>(null)
+  const handledTurnCompletionIdsRef = useRef(new Set<string>())
+  const sessionRef = useRef<CodexSession | null>(null)
+  const shouldAutoScrollRef = useRef(true)
 
   const handleError = useCallback(
     (currentError: unknown) => {
@@ -146,6 +179,30 @@ export function CodexConversationModule({
     }
   }, [activeSessionId, apiBaseUrl, branch, demandId, disabled, handleError, initializationError, onThreadChange, sessionSwitchKey, threadId, workspaceId, workspacePath])
 
+  const notifyTurnCompleted = useCallback((completedSession: CodexSession, completedEvents: CodexConversationEvent[]) => {
+    const completedEvent = [...completedEvents].reverse().find((event) => event.type === 'turn.completed')
+
+    if (!completedEvent) {
+      return
+    }
+
+    if (handledTurnCompletionIdsRef.current.has(completedEvent.id)) {
+      return
+    }
+
+    handledTurnCompletionIdsRef.current.add(completedEvent.id)
+    onTurnCompleted?.(completedSession, completedEvents)
+  }, [onTurnCompleted])
+
+  const completePromptRun = useCallback((completedSession: CodexSession, completedEvents: CodexConversationEvent[]) => {
+    if (pendingPromptRunSessionIdRef.current !== completedSession.id) {
+      return
+    }
+
+    pendingPromptRunSessionIdRef.current = null
+    onPromptRunCompleted?.(completedSession, completedEvents)
+  }, [onPromptRunCompleted])
+
   useEffect(() => {
     if (!session || (session.status !== 'running' && Date.now() > pollUntil)) {
       return
@@ -169,6 +226,8 @@ export function CodexConversationModule({
 
         if (hasTurnCompleted(response.events)) {
           setPollUntil(0)
+          notifyTurnCompleted(response.session, response.events)
+          completePromptRun(response.session, response.events)
         }
       } catch (currentError) {
         if (!ignore) {
@@ -181,9 +240,13 @@ export function CodexConversationModule({
       ignore = true
       window.clearInterval(timer)
     }
-  }, [apiBaseUrl, handleError, pollUntil, session, streamConnected])
+  }, [apiBaseUrl, completePromptRun, handleError, notifyTurnCompleted, pollUntil, session, streamConnected])
 
   const sessionId = session?.id
+
+  useEffect(() => {
+    sessionRef.current = session
+  }, [session])
 
   useEffect(() => {
     if (!sessionId) {
@@ -199,10 +262,31 @@ export function CodexConversationModule({
       const response = JSON.parse((message as MessageEvent<string>).data) as { session: CodexSession; events: CodexConversationEvent[] }
       setSession(response.session)
       setEvents(response.events)
+
+      if (hasTurnCompleted(response.events)) {
+        notifyTurnCompleted(response.session, response.events)
+        completePromptRun(response.session, response.events)
+      }
     })
     eventSource.addEventListener('codex-event', (message) => {
       const event = JSON.parse((message as MessageEvent<string>).data) as CodexConversationEvent
-      setEvents((currentEvents) => upsertEvent(currentEvents, event))
+      setEvents((currentEvents) => {
+        const nextEvents = upsertEvent(currentEvents, event)
+
+        if (event.type === 'turn.completed' || event.type === 'error' || event.type === 'turn.interrupted') {
+          const currentSession = sessionRef.current
+
+          if (currentSession) {
+            if (event.type === 'turn.completed') {
+              notifyTurnCompleted(currentSession, nextEvents)
+            }
+
+            completePromptRun(currentSession, nextEvents)
+          }
+        }
+
+        return nextEvents
+      })
 
       if (event.type === 'turn.started') {
         setSession((currentSession) => (currentSession ? { ...currentSession, status: 'running' } : currentSession))
@@ -223,7 +307,7 @@ export function CodexConversationModule({
       eventSource.close()
       setStreamConnected(false)
     }
-  }, [apiBaseUrl, sessionId])
+  }, [apiBaseUrl, completePromptRun, notifyTurnCompleted, sessionId])
 
   const messages = useMemo(() => toConversationMessages(events), [events])
   const planSteps = useMemo(() => [...events].reverse().find((event) => event.type === 'plan.updated')?.steps ?? [], [events])
@@ -234,22 +318,20 @@ export function CodexConversationModule({
   const cannotSend = disabled || isBusy || !draft.trim() || !session
 
   useEffect(() => {
-    if (hasErrorEvent) {
-      setCommandExpanded(true)
-    }
-  }, [hasErrorEvent])
-
-  useEffect(() => {
     const messageList = messageListRef.current
 
     if (!messageList) {
       return
     }
 
+    if (!shouldAutoScrollRef.current) {
+      return
+    }
+
     requestAnimationFrame(() => {
       messageList.scrollTo({
         top: messageList.scrollHeight,
-        behavior: 'smooth',
+        behavior: 'auto',
       })
     })
   }, [commandOutputs.length, loading, messages, planSteps.length, sessionId])
@@ -268,6 +350,11 @@ export function CodexConversationModule({
       setSession({ ...response.session, status: 'running' })
       setEvents(response.events)
       setPollUntil(streamConnected ? 0 : Date.now() + 120000)
+
+      if (hasTurnCompleted(response.events)) {
+        notifyTurnCompleted(response.session, response.events)
+        completePromptRun(response.session, response.events)
+      }
     } catch (currentError) {
       handleError(currentError)
     } finally {
@@ -289,15 +376,21 @@ export function CodexConversationModule({
     }
   }
 
-  async function handleCreateSession() {
+  const focusDraftInput = useCallback(() => {
+    window.setTimeout(() => {
+      draftInputRef.current?.focus({ cursor: 'end' })
+    }, 0)
+  }, [])
+
+  const handleCreateSession = useCallback(async (options: { alias?: string; focusInput?: boolean } = {}) => {
     if (disabled) {
       setError(initializationError ?? '需求工作区正在初始化，暂时无法创建 AI 会话。')
-      return
+      return null
     }
 
     if (!demandId || !workspaceId) {
       setError('当前需求缺少 demandId 或 workspaceId，无法创建 AI 会话。请先完成需求工作区初始化。')
-      return
+      return null
     }
 
     setLoading(true)
@@ -311,7 +404,7 @@ export function CodexConversationModule({
           cwd: workspacePath,
           branch,
           metadata: {
-            alias: `新会话 ${sessions.length + 1}`,
+            alias: options.alias ?? `新会话 ${sessions.length + 1}`,
           },
         },
         apiBaseUrl,
@@ -323,12 +416,68 @@ export function CodexConversationModule({
       setDraft('')
       writeSelectedSessionId(demandId, workspaceId, nextSession.id)
       onThreadChange?.(nextSession.threadId)
+
+      if (options.focusInput) {
+        focusDraftInput()
+      }
+
+      return nextSession
     } catch (currentError) {
       handleError(currentError)
+      return null
     } finally {
       setLoading(false)
     }
-  }
+  }, [apiBaseUrl, branch, demandId, disabled, focusDraftInput, handleError, initializationError, onThreadChange, sessions.length, workspaceId, workspacePath])
+
+  const runPromptInNewSession = useCallback(async (request: { alias: string; prompt: string; focusInput?: boolean }) => {
+    const nextSession = await handleCreateSession({
+      alias: request.alias,
+      focusInput: request.focusInput,
+    })
+
+    if (!nextSession) {
+      return
+    }
+
+    pendingPromptRunSessionIdRef.current = nextSession.id
+    onPromptRunStarted?.(nextSession)
+    setSending(true)
+    setError(null)
+
+    try {
+      const response = await sendCodexTurn(nextSession.id, { text: request.prompt }, apiBaseUrl)
+      setSession({ ...response.session, status: 'running' })
+      setEvents(response.events)
+      setPollUntil(streamConnected ? 0 : Date.now() + 120000)
+    } catch (currentError) {
+      pendingPromptRunSessionIdRef.current = null
+      handleError(currentError)
+    } finally {
+      setSending(false)
+    }
+  }, [apiBaseUrl, handleCreateSession, handleError, onPromptRunStarted, streamConnected])
+
+  useEffect(() => {
+    if (!createSessionRequest || createSessionRequest.key === handledCreateSessionRequestKeyRef.current) {
+      return
+    }
+
+    handledCreateSessionRequestKeyRef.current = createSessionRequest.key
+    void handleCreateSession({
+      alias: createSessionRequest.alias,
+      focusInput: createSessionRequest.focusInput,
+    })
+  }, [createSessionRequest, handleCreateSession])
+
+  useEffect(() => {
+    if (!runPromptRequest || runPromptRequest.key === handledRunPromptRequestKeyRef.current) {
+      return
+    }
+
+    handledRunPromptRequestKeyRef.current = runPromptRequest.key
+    void runPromptInNewSession(runPromptRequest)
+  }, [runPromptInNewSession, runPromptRequest])
 
   async function handleSelectSession(nextSession: CodexSession) {
     setSession(nextSession)
@@ -351,7 +500,13 @@ export function CodexConversationModule({
   return (
     <div className={`grid min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] ${isDark ? 'bg-slate-950/70' : 'bg-slate-50'}`}>
       <div className="grid min-h-0 grid-rows-[1fr_auto]">
-        <div ref={messageListRef} className="min-h-0 overflow-auto p-4">
+        <div
+          ref={messageListRef}
+          className="min-h-0 overflow-auto p-4"
+          onScroll={(event) => {
+            shouldAutoScrollRef.current = isNearScrollBottom(event.currentTarget)
+          }}
+        >
           {loading && <CodexInitializingState isDark={isDark} />}
           {error && <CodexErrorState error={error} isDark={isDark} />}
           {!loading && !messages.length && <CodexEmptyState isDark={isDark} />}
@@ -362,7 +517,7 @@ export function CodexConversationModule({
           {!!planSteps.length && <CodexPlanPanel steps={planSteps} isDark={isDark} />}
           {!!commandOutputs.length && (
             <CodexCommandPanel
-              expanded={commandExpanded}
+              expanded={commandExpanded || hasErrorEvent}
               outputs={commandOutputs}
               isDark={isDark}
               onToggle={() => setCommandExpanded((value) => !value)}
@@ -373,6 +528,7 @@ export function CodexConversationModule({
         <div className={`border-t p-4 ${pageBand(isDark)}`}>
           <div className={`overflow-hidden rounded-lg border ${panel(isDark)}`}>
             <Input.TextArea
+              ref={draftInputRef}
               variant="borderless"
               disabled={disabled || loading || !session}
               value={draft}
@@ -419,321 +575,5 @@ export function CodexConversationModule({
         onSelectSession={handleSelectSession}
       />
     </div>
-  )
-}
-
-function toConversationMessages(events: CodexConversationEvent[]) {
-  const messages: ConversationMessage[] = []
-  const streamingMessageIndexById = new Map<string, number>()
-
-  for (const event of events) {
-    if (event.type === 'message.delta' && event.itemId && event.text) {
-      const existingIndex = streamingMessageIndexById.get(event.itemId)
-
-      if (existingIndex === undefined) {
-        streamingMessageIndexById.set(event.itemId, messages.length)
-        messages.push({
-          id: event.itemId,
-          role: 'assistant',
-          text: event.text,
-          streaming: true,
-        })
-      } else {
-        messages[existingIndex] = {
-          ...messages[existingIndex],
-          text: `${messages[existingIndex].text}${event.text}`,
-        }
-      }
-    }
-
-    if (event.type === 'message.completed' && event.role && event.text) {
-      const messageId = event.itemId || event.id
-      const existingIndex = event.itemId ? streamingMessageIndexById.get(event.itemId) : undefined
-      const completedMessage: ConversationMessage = {
-        id: messageId,
-        role: event.role,
-        text: event.text,
-      }
-
-      if (existingIndex === undefined) {
-        messages.push(completedMessage)
-      } else {
-        messages[existingIndex] = completedMessage
-      }
-    }
-  }
-
-  return messages
-}
-
-function hasTurnCompleted(events: CodexConversationEvent[]) {
-  return events.some((event) => event.type === 'turn.completed' || event.type === 'error')
-}
-
-function upsertEvent(events: CodexConversationEvent[], event: CodexConversationEvent) {
-  if (events.some((currentEvent) => currentEvent.id === event.id)) {
-    return events
-  }
-
-  return [...events, event]
-}
-
-function getCodexActivity({ events, isBusy }: { events: CodexConversationEvent[]; isBusy: boolean }) {
-  if (!isBusy) {
-    return null
-  }
-
-  const lastEvent = [...events].reverse().find((event) => ['command.output', 'diff.updated', 'plan.updated', 'message.delta', 'turn.started'].includes(event.type))
-
-  if (!lastEvent) {
-    return 'AI 正在处理...'
-  }
-
-  if (lastEvent.type === 'command.output') {
-    return 'AI 正在执行命令...'
-  }
-
-  if (lastEvent.type === 'diff.updated') {
-    return 'AI 正在更新文件...'
-  }
-
-  if (lastEvent.type === 'plan.updated') {
-    return 'AI 正在规划步骤...'
-  }
-
-  if (lastEvent.type === 'message.delta') {
-    return 'AI 正在回复...'
-  }
-
-  return 'AI 正在处理...'
-}
-
-function readSelectedSessionId(demandId: string, workspaceId: string) {
-  return window.localStorage.getItem(getSelectedSessionStorageKey(demandId, workspaceId))
-}
-
-function writeSelectedSessionId(demandId: string, workspaceId: string, sessionId: string) {
-  window.localStorage.setItem(getSelectedSessionStorageKey(demandId, workspaceId), sessionId)
-}
-
-function getSelectedSessionStorageKey(demandId: string, workspaceId: string) {
-  return `${selectedSessionStoragePrefix}${demandId}:${workspaceId}`
-}
-
-function CodexInitializingState({ isDark }: { isDark: boolean }) {
-  return (
-    <div className={`mb-4 grid min-h-[220px] place-items-center rounded-lg border px-6 py-8 ${panel(isDark)}`}>
-      <div className="grid max-w-[520px] justify-items-center gap-4 text-center">
-        <Spin size="large" />
-        <div>
-          <div className="text-base font-extrabold">正在连接 AI 会话</div>
-          <p className={`mt-2 text-sm leading-relaxed ${mutedText(isDark)}`}>
-            service 正在绑定当前需求工作区，并准备 AI 对话上下文。
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function CodexErrorState({ error, isDark }: { error: string; isDark: boolean }) {
-  return (
-    <div className={`mb-4 rounded-lg border px-3 py-2 text-xs font-bold ${panel(isDark)}`}>
-      AI service 不可用：{error}
-    </div>
-  )
-}
-
-function CodexEmptyState({ isDark }: { isDark: boolean }) {
-  return (
-    <div className={`mb-4 rounded-lg border p-4 text-sm ${panel(isDark)}`}>
-      <div className="font-extrabold">AI 对话已就绪</div>
-      <p className={`mt-2 leading-relaxed ${mutedText(isDark)}`}>当前模块通过 service:3100 创建会话。</p>
-    </div>
-  )
-}
-
-function CodexMessageBubble({ message, isDark }: { message: ConversationMessage; isDark: boolean }) {
-  const isUser = message.role === 'user'
-
-  return (
-    <div className={`mb-4 grid max-w-[860px] gap-3 ${isUser ? 'ml-auto grid-cols-[1fr_32px]' : 'grid-cols-[32px_1fr]'}`}>
-      {!isUser && <Avatar label="AI" ai />}
-      <div className={`rounded-lg border p-3 text-sm leading-relaxed ${isUser ? toneClass('blue', isDark) : panel(isDark)}`}>
-        <div className="max-w-none [&_code]:break-words [&_code]:rounded [&_code]:bg-slate-500/10 [&_code]:px-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_p+p]:mt-2 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:bg-slate-950/80 [&_pre]:p-3 [&_pre]:text-slate-100 [&_ul]:ml-5 [&_ul]:list-disc">
-          <ReactMarkdown>{message.text}</ReactMarkdown>
-          {message.streaming && <span className={mutedText(isDark)}>▍</span>}
-        </div>
-      </div>
-      {isUser && <Avatar label="我" />}
-    </div>
-  )
-}
-
-function CodexActivityBar({ activity, isDark }: { activity: string; isDark: boolean }) {
-  return (
-    <div className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${panelSoft(isDark)}`}>
-      <span className="inline-block size-2 animate-pulse rounded-full bg-emerald-500" />
-      <span>{activity}</span>
-    </div>
-  )
-}
-
-function CodexPlanPanel({ steps, isDark }: { steps: Array<{ text: string; status: string }>; isDark: boolean }) {
-  return (
-    <div className={`mb-4 overflow-hidden rounded-lg border ${panel(isDark)}`}>
-      <div className={`border-b px-3 py-2 text-xs font-extrabold ${dividerBorder(isDark)}`}>执行计划</div>
-      {steps.map((step) => (
-        <div key={step.text} className="grid grid-cols-[82px_1fr] gap-3 border-t border-slate-500/15 px-3 py-2 first:border-t-0">
-          <span className={`text-xs font-bold ${mutedText(isDark)}`}>{step.status}</span>
-          <span className="text-sm">{step.text}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function CodexCommandPanel({
-  expanded,
-  outputs,
-  isDark,
-  onToggle,
-}: {
-  expanded: boolean
-  outputs: CodexConversationEvent[]
-  isDark: boolean
-  onToggle: () => void
-}) {
-  return (
-    <div className={`mb-4 overflow-hidden rounded-lg border ${panel(isDark)}`}>
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-xs font-extrabold ${dividerBorder(isDark)}`}
-      >
-        <span>命令输出 · {outputs.length} 条</span>
-        <span className={mutedText(isDark)}>{expanded ? '收起' : '展开'}</span>
-      </button>
-      {expanded && (
-        <pre className={`max-h-48 overflow-auto whitespace-pre-wrap p-3 text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-          {outputs.map((output) => output.chunk).join('\n')}
-        </pre>
-      )}
-    </div>
-  )
-}
-
-function CodexSessionRegion({
-  activeSessionId,
-  apiBaseUrl,
-  disabled,
-  isDark,
-  onRename,
-  onCreateSession,
-  onSelectSession,
-  sessions,
-}: {
-  activeSessionId?: string
-  apiBaseUrl?: string
-  disabled?: boolean
-  isDark: boolean
-  onRename: (session: CodexSession) => void
-  onCreateSession: () => void
-  onSelectSession: (session: CodexSession) => void
-  sessions: CodexSession[]
-}) {
-  // Region: 历史对话区
-  return (
-    <aside className={`hidden min-h-0 border-l xl:grid xl:grid-rows-[auto_1fr] ${pageBand(isDark)}`}>
-      <div className={`flex items-center justify-between gap-3 border-b p-3 ${dividerBorder(isDark)}`}>
-        <h2 className="text-sm font-extrabold">AI 会话</h2>
-        <IconButton disabled={disabled} label="新增会话" onClick={onCreateSession}>+</IconButton>
-      </div>
-      <div className="min-h-0 overflow-auto p-2">
-        {sessions.map((session) => (
-          <CodexSessionCard
-            key={session.id}
-            active={session.id === activeSessionId}
-            apiBaseUrl={apiBaseUrl}
-            isDark={isDark}
-            session={session}
-            onRename={onRename}
-            onSelect={onSelectSession}
-          />
-        ))}
-      </div>
-    </aside>
-  )
-}
-
-function CodexSessionCard({
-  active,
-  apiBaseUrl,
-  isDark,
-  onRename,
-  onSelect,
-  session,
-}: {
-  active: boolean
-  apiBaseUrl?: string
-  isDark: boolean
-  onRename: (session: CodexSession) => void
-  onSelect: (session: CodexSession) => void
-  session: CodexSession
-}) {
-  const title = session.metadata?.alias || session.threadId
-  const clickTimerRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (clickTimerRef.current) {
-        window.clearTimeout(clickTimerRef.current)
-      }
-    }
-  }, [])
-
-  async function handleRename() {
-    const alias = window.prompt('设置会话别名', session.metadata?.alias || '')
-
-    if (!alias?.trim()) {
-      return
-    }
-
-    onRename(await renameCodexSession(session.id, alias.trim(), apiBaseUrl))
-  }
-
-  return (
-    <button
-      type="button"
-      title="双击设置别名"
-      onClick={(event) => {
-        if (event.detail > 1) {
-          return
-        }
-
-        clickTimerRef.current = window.setTimeout(() => {
-          onSelect(session)
-          clickTimerRef.current = null
-        }, 240)
-      }}
-      onDoubleClick={(event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        if (clickTimerRef.current) {
-          window.clearTimeout(clickTimerRef.current)
-          clickTimerRef.current = null
-        }
-        handleRename()
-      }}
-      className={`mb-2 w-full cursor-pointer rounded-lg border p-3 text-left text-xs font-extrabold ${
-        active
-          ? isDark
-            ? 'border-indigo-300/60 bg-slate-900 shadow-[inset_3px_0_0_#818cf8]'
-            : 'border-indigo-200 bg-indigo-50 text-indigo-900 shadow-[inset_3px_0_0_#4f46e5]'
-          : panelSoft(isDark)
-      }`}
-    >
-      <span className="line-clamp-2 break-words">{title}</span>
-    </button>
   )
 }
