@@ -21,3 +21,7 @@
 - 2026-05-20 产物区列表忽略以 `.` 开头的隐藏节点目录和隐藏文件。
 - 2026-05-21 产物区文件增加可点击预览：前端点击产物后调用 service 读取当前需求 artifacts 根目录内的文件内容，并在弹框中用 `marked` 渲染 Markdown；渲染前通过 DOMPurify 清理 HTML，产物列表项使用 pointer 与 hover 状态提示可点击。
 - 产物预览接口只允许读取当前工作区 `{workspacePath}/artifacts/{branchName}` 下的真实文件路径，并通过 `realpath` 校验符号链接解析后的路径仍在 artifacts 根目录内。
+- 2026-05-21 产物预览补充 Mermaid 支持：弹框渲染 Markdown 后识别 `pre > code.language-mermaid`，按需动态加载 `mermaid` 并将流程图替换为 SVG；Mermaid 使用 `securityLevel=strict` 生成内容，渲染失败时保留原始代码块并增加错误边框。
+- Mermaid 采用动态 import，避免普通详情页加载直接引入 Mermaid 全量解析依赖；只有预览内容包含 Mermaid 代码块时才加载。
+- 2026-05-21 修正 Mermaid 节点文本未显示：关闭 flowchart HTML labels，优先使用 SVG text 渲染文本；同时取消 Mermaid SVG 的二次 DOMPurify 白名单净化，避免 Mermaid 节点 label 结构被剥离。
+- 2026-05-21 根据代码审核修正 Mermaid 异步渲染边界：捕获动态 import 失败，render 失败路径也遵守 effect cleanup guard，并同步设置 root-level `htmlLabels: false`。

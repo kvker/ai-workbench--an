@@ -74,6 +74,16 @@
   - `repos/app`: `npm run build`
     - 结果：通过。
     - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次预览弹框。
+- 2026-05-21 产物区 Mermaid 预览验证：
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Mermaid 被拆分为动态 chunk；Vite 仍输出大 chunk warning，为既有包体积与 Mermaid 依赖体积提示，不阻塞本次修复。
+  - 修正 Mermaid 流程图节点文本显示：
+    - 结果：通过构建验证。
+    - 备注：关闭 flowchart HTML labels，并取消 Mermaid SVG 二次白名单净化，避免节点 label 被剥离。
+  - 代码审核后异步边界修正：
+    - 结果：通过构建验证。
+    - 备注：动态 import 失败与 render 失败均有兜底，cleanup 后不再修改 DOM。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。
