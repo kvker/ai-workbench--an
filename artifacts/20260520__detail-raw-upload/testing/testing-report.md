@@ -68,6 +68,12 @@
 - 2026-05-20 产物区隐藏文件过滤验证：
   - `repos/service`: `node -c src/routes/task.js`
     - 结果：通过。
+- 2026-05-21 产物区 Markdown 预览验证：
+  - `repos/service`: `node -c src/routes/task.js`
+    - 结果：通过。
+  - `repos/app`: `npm run build`
+    - 结果：通过。
+    - 备注：Vite 输出 chunk size warning，为既有包体积提示，不影响本次预览弹框。
 - 上传接口真实验证：
   - 使用临时 zip 调用 `POST /api/task/test1-mpc89zwi/raw-input?fileName=raw-upload-test.zip`。
   - 第一次返回 `uploaded`，原始 zip 写入代码区 `tmp/raw-upload-test.zip`，解包文件写入 `artifacts/task-test1-mpc89zwi/pm-raw/input/raw.txt`。

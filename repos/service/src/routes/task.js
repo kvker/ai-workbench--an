@@ -41,6 +41,32 @@ router.get('/:issueId/artifacts', async (req, res, next) => {
   }
 });
 
+router.get('/:issueId/artifacts/preview', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req);
+    const artifactsRoot = path.join(workspace.workspacePath, 'artifacts', workspace.branchName);
+    const artifactPath = await resolveArtifactPath(artifactsRoot, req.query.path);
+    const stats = await fs.stat(artifactPath);
+
+    if (!stats.isFile()) {
+      res.status(400).json({ message: 'Artifact path must be a file.' });
+      return;
+    }
+
+    const content = await fs.readFile(artifactPath, 'utf8');
+
+    res.json({
+      title: path.basename(artifactPath),
+      path: artifactPath,
+      content,
+      size: stats.size,
+      updatedAt: stats.mtime.toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/:issueId/raw-input', express.raw({ type: ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'], limit: ZIP_BODY_LIMIT }), async (req, res, next) => {
   try {
     const fileName = sanitizeZipFileName(req.query.fileName);
@@ -246,6 +272,39 @@ async function listArtifactFiles(artifactsRoot) {
     const byUpdatedAt = String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
     return byUpdatedAt || a.path.localeCompare(b.path);
   });
+}
+
+async function resolveArtifactPath(artifactsRoot, targetPath) {
+  const rawPath = Array.isArray(targetPath) ? targetPath[0] : targetPath;
+  const artifactPath = String(rawPath || '').trim();
+
+  if (!artifactPath) {
+    const error = new Error('Artifact path is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const resolvedRoot = path.resolve(artifactsRoot);
+  const resolvedPath = path.resolve(artifactPath);
+  const relativePath = path.relative(resolvedRoot, resolvedPath);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    const error = new Error('Artifact path is outside current artifacts root.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const realRoot = await fs.realpath(resolvedRoot);
+  const realPath = await fs.realpath(resolvedPath);
+  const realRelativePath = path.relative(realRoot, realPath);
+
+  if (realRelativePath.startsWith('..') || path.isAbsolute(realRelativePath)) {
+    const error = new Error('Artifact path resolves outside current artifacts root.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return realPath;
 }
 
 async function readDirectoryEntries(targetPath) {

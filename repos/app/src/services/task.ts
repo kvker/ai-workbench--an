@@ -94,6 +94,14 @@ export type WorkspaceArtifactsResult = {
   workspace?: LocalWorkspace
 }
 
+export type WorkspaceArtifactPreview = {
+  title: string
+  path: string
+  content: string
+  size: number
+  updatedAt?: string
+}
+
 export async function ensureWorkspace(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
@@ -145,6 +153,17 @@ export async function listWorkspaceArtifacts(issue: Issue) {
   appendIssueParams(params, issue)
 
   return request<WorkspaceArtifactsResult>(`/task/${issue.id}/artifacts?${params.toString()}`, {
+    method: 'GET',
+  })
+}
+
+export async function previewWorkspaceArtifact(issue: Issue, artifactPath: string) {
+  const params = new URLSearchParams({
+    path: artifactPath,
+  })
+  appendIssueParams(params, issue)
+
+  return request<WorkspaceArtifactPreview>(`/task/${issue.id}/artifacts/preview?${params.toString()}`, {
     method: 'GET',
   })
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, UserSwitchOutlined } from '@ant-design/icons'
 import { Button, FloatButton, message, Modal, Radio, Steps } from 'antd'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import { useParams } from 'react-router-dom'
 import { Pill } from '../components/Pill'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
@@ -35,6 +37,9 @@ export function DemandDetailPage() {
   const [isUploadingRawInput, setIsUploadingRawInput] = useState(false)
   const [isUpdatingHarnessStatus, setIsUpdatingHarnessStatus] = useState(false)
   const [isAnalyzingPmRaw, setIsAnalyzingPmRaw] = useState(false)
+  const [previewDocument, setPreviewDocument] = useState<DocumentSummary | null>(null)
+  const [previewContent, setPreviewContent] = useState('')
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   const [activeCodexSessionId, setActiveCodexSessionId] = useState<string | undefined>(undefined)
   const [codexSessionSwitchKey, setCodexSessionSwitchKey] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
@@ -134,6 +139,28 @@ export function DemandDetailPage() {
       messageApi.error(updateError instanceof Error ? updateError.message : '更新代码失败')
     } finally {
       setIsUpdatingCode(false)
+    }
+  }
+
+  const openArtifactPreview = async (document: DocumentSummary) => {
+    if (!document.path) {
+      messageApi.warning('产物路径为空，暂时无法预览')
+      return
+    }
+
+    setPreviewDocument(document)
+    setPreviewContent('')
+    setIsPreviewLoading(true)
+
+    try {
+      const preview = await taskService.previewWorkspaceArtifact(issue, document.path)
+      setPreviewDocument({ ...document, title: preview.title, path: preview.path })
+      setPreviewContent(preview.content)
+    } catch (previewError) {
+      messageApi.error(previewError instanceof Error ? previewError.message : '产物预览失败')
+      setPreviewDocument(null)
+    } finally {
+      setIsPreviewLoading(false)
     }
   }
 
@@ -239,7 +266,7 @@ export function DemandDetailPage() {
           onUpdateHarnessStatus={updateHarnessStatus}
           onUploadRawInput={openRawInputPicker}
         />
-        <ArtifactRegion documents={documents} isDark={isDark} />
+        <ArtifactRegion documents={documents} isDark={isDark} onPreviewDocument={openArtifactPreview} />
       </aside>
 
       <CodexConversationModule
@@ -255,6 +282,13 @@ export function DemandDetailPage() {
       />
 
       <DetailDialog issue={issue} workspacePath={workspace?.workspacePath} branch={branch} open={isDetailOpen} onClose={() => setIsDetailOpen(false)} />
+      <ArtifactPreviewDialog
+        content={previewContent}
+        document={previewDocument}
+        loading={isPreviewLoading}
+        open={Boolean(previewDocument)}
+        onClose={() => setPreviewDocument(null)}
+      />
       <Modal
         title="切换身份"
         open={isIdentityOpen}
@@ -522,7 +556,15 @@ function WorkflowStepTitle({
   )
 }
 
-function ArtifactRegion({ documents, isDark }: { documents: DocumentSummary[]; isDark: boolean }) {
+function ArtifactRegion({
+  documents,
+  isDark,
+  onPreviewDocument,
+}: {
+  documents: DocumentSummary[]
+  isDark: boolean
+  onPreviewDocument: (document: DocumentSummary) => void
+}) {
   // Region: 产物区
   return (
     <section className={`grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border ${panel(isDark)}`}>
@@ -536,10 +578,45 @@ function ArtifactRegion({ documents, isDark }: { documents: DocumentSummary[]; i
           </div>
         )}
         {documents.map((document) => (
-          <QuickDoc key={document.title} title={document.title} body={document.body} />
+          <QuickDoc key={document.path ?? document.title} document={document} onPreview={() => onPreviewDocument(document)} />
         ))}
       </div>
     </section>
+  )
+}
+
+function ArtifactPreviewDialog({
+  content,
+  document,
+  loading,
+  open,
+  onClose,
+}: {
+  content: string
+  document: DocumentSummary | null
+  loading: boolean
+  open: boolean
+  onClose: () => void
+}) {
+  const { isDark } = useAppTheme()
+  const html = DOMPurify.sanitize(marked.parse(content, { async: false }))
+
+  return (
+    <Modal
+      title={document?.title ?? '产物预览'}
+      open={open}
+      footer={null}
+      loading={loading}
+      width={860}
+      onCancel={onClose}
+    >
+      <div className={`max-h-[70vh] overflow-auto rounded-lg border p-4 ${panel(isDark)}`}>
+        <div
+          className={`max-w-none text-sm leading-relaxed ${isDark ? 'text-slate-100' : 'text-slate-800'} [&_blockquote]:border-l-4 [&_blockquote]:border-cyan-400 [&_blockquote]:pl-3 [&_code]:break-words [&_code]:rounded [&_code]:bg-slate-500/10 [&_code]:px-1 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-extrabold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-extrabold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:font-extrabold [&_hr]:my-4 [&_li+li]:mt-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_p+p]:mt-2 [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:bg-slate-950/80 [&_pre]:p-3 [&_pre]:text-slate-100 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-500/20 [&_td]:p-2 [&_th]:border [&_th]:border-slate-500/20 [&_th]:p-2 [&_th]:text-left [&_ul]:ml-5 [&_ul]:list-disc`}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
+    </Modal>
   )
 }
 
@@ -585,16 +662,20 @@ function DetailDialog({
   )
 }
 
-function QuickDoc({ title, body }: { title: string; body: string }) {
+function QuickDoc({ document, onPreview }: { document: DocumentSummary; onPreview: () => void }) {
   const { isDark } = useAppTheme()
 
   return (
-    <div className="border-t border-slate-500/15 py-3 first:border-t-0">
+    <button
+      type="button"
+      className={`block w-full cursor-pointer border-t border-slate-500/15 py-3 text-left first:border-t-0 ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-100/80'}`}
+      onClick={onPreview}
+    >
       <div>
-        <div className="break-words text-xs font-extrabold">{title}</div>
-        <p className={`mt-1 text-xs leading-relaxed ${mutedText(isDark)}`}>{body}</p>
+        <div className="break-words text-xs font-extrabold">{document.title}</div>
+        <p className={`mt-1 text-xs leading-relaxed ${mutedText(isDark)}`}>{document.body}</p>
       </div>
-    </div>
+    </button>
   )
 }
 
