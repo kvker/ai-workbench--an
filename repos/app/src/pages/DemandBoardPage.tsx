@@ -44,7 +44,11 @@ export function DemandBoardPage() {
   }, [])
 
   useEffect(() => {
-    void loadIssues()
+    const load = async () => {
+      await loadIssues()
+    }
+
+    void load()
   }, [loadIssues, reloadKey])
 
   const loadUsers = useCallback(async () => {

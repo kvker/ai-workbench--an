@@ -6,6 +6,7 @@ const path = require('node:path');
 const { promisify } = require('node:util');
 const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
 const { startPmRawAnalysis } = require('../services/pmRawAnalysisService');
+const { prepareDeployPlanRepositories } = require('../services/deployPlanRepositoryService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
 
 const router = express.Router();
@@ -197,6 +198,24 @@ router.post('/:issueId/pm-raw/analyze', async (req, res, next) => {
   }
 });
 
+router.post('/:issueId/deploy-plan-repositories/prepare', async (req, res, next) => {
+  try {
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
+    const result = await prepareDeployPlanRepositories({
+      baseDir: path.join(workspace.workspacePath, 'repos'),
+      deployPlans: req.body?.deployPlans,
+      token: getRequestToken(req),
+    });
+
+    res.json({
+      ...result,
+      workspace: toWorkspaceResponse(workspace),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 async function prepareIssueWorkspace(req, options = {}) {
   const { syncKnowledge = true, forceSyncKnowledge = false } = options;
   const issueId = String(req.params.issueId || '').trim();
@@ -231,6 +250,11 @@ function toWorkspaceResponse(workspace) {
     workspaceFolder: workspace.workspaceFolder,
     workspacePath: workspace.workspacePath,
   };
+}
+
+function getRequestToken(req) {
+  const token = req.headers.token || req.headers.authorization;
+  return Array.isArray(token) ? token[0] : token;
 }
 
 function sanitizeZipFileName(fileName) {

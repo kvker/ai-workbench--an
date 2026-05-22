@@ -1,7 +1,7 @@
 import { request } from './http'
 import { getStoredToken } from './authStorage'
 import { getWorkspaceUserKey } from './session'
-import type { HarnessStatus, Issue, LocalWorkspace } from './types'
+import type { DeployPlan, HarnessStatus, Issue, LocalWorkspace } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://172.16.4.81:3100'
 
@@ -105,6 +105,23 @@ export type FlowCompleteCheckResult = {
   workspace?: LocalWorkspace
 }
 
+export type PrepareDeployPlanRepositoriesResult = {
+  status: 'completed' | 'partial' | 'skipped'
+  baseDir: string
+  repositories: Array<{
+    deployPlanId?: number
+    projectConfigId?: number
+    projectName?: string
+    projectCode?: string
+    branchName?: string
+    repositoryUrl?: string
+    localPath?: string
+    status: 'cloned' | 'updated' | 'skipped' | 'failed'
+    reason?: string
+  }>
+  workspace?: LocalWorkspace
+}
+
 export async function ensureWorkspace(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
@@ -167,6 +184,18 @@ export async function checkFlowComplete(issue: Issue, input: { harnessStatus: Ha
 
   return request<FlowCompleteCheckResult>(`/api/task/${issue.id}/flow/complete-check?${params.toString()}`, {
     body: input,
+    method: 'POST',
+  })
+}
+
+export async function prepareDeployPlanRepositories(issue: Issue, deployPlans: DeployPlan[]) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<PrepareDeployPlanRepositoriesResult>(`/api/task/${issue.id}/deploy-plan-repositories/prepare?${params.toString()}`, {
+    body: {
+      deployPlans,
+    },
     method: 'POST',
   })
 }

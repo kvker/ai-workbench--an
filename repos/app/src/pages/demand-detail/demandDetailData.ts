@@ -12,6 +12,7 @@ const emptyIssue: Issue = {
 export function createEmptyIssueTask(): IssueTask {
   return {
     issue: emptyIssue,
+    deployPlans: [],
     flowSteps: createFlowSteps(emptyIssue),
     documents: [],
   }
@@ -36,6 +37,7 @@ export async function loadIssueTask(issueId: string): Promise<IssueTask> {
   return {
     issue: displayIssue,
     board,
+    deployPlans: board?.deployPlans ?? [],
     workspace,
     workspaceError,
     flowSteps: createFlowSteps(displayIssue),
@@ -88,6 +90,10 @@ export function createFlowCompletionPrompt({
     '如果不满足，请在 raw-status.md 中说明不能完成的原因，且不要写入“已完成”。',
     '只需要更新状态文档，不要修改需求系统状态。',
   ].join('\n')
+}
+
+export function createIssueBranchName(issue: Issue) {
+  return issue.wsBranchName || `task-${issue.id}`
 }
 
 export function getIssueFlowTitle(issue: Issue) {

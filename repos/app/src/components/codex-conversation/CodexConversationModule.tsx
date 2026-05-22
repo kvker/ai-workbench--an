@@ -300,7 +300,13 @@ export function CodexConversationModule({
     eventSource.addEventListener('error', () => {
       setStreamConnected(false)
       eventSource.close()
-      setPollUntil(Date.now() + 120000)
+      const currentSession = sessionRef.current
+
+      if (currentSession?.status === 'running' || pendingPromptRunSessionIdRef.current === currentSession?.id) {
+        setPollUntil(Date.now() + 120000)
+      } else {
+        setPollUntil(0)
+      }
     })
 
     return () => {

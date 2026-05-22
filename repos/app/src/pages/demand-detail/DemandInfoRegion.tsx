@@ -1,4 +1,4 @@
-import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined } from '@ant-design/icons'
+import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, RocketOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import type { Issue } from '../../services'
 import { mutedText, panel } from '../../utils/themeClasses'
@@ -11,6 +11,7 @@ export function DemandInfoRegion({
   loading,
   onOpenDetail,
   onOpenDocumentRegion,
+  onOpenDeployPlans,
   onUpdateFiles,
 }: {
   issue: Issue
@@ -19,6 +20,7 @@ export function DemandInfoRegion({
   loading: boolean
   onOpenDetail: () => void
   onOpenDocumentRegion: () => void
+  onOpenDeployPlans: () => void
   onUpdateFiles: () => void
 }) {
   return (
@@ -36,6 +38,9 @@ export function DemandInfoRegion({
           </Button>
           <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingFiles} onClick={onUpdateFiles} className="text-xs font-extrabold">
             更新文件
+          </Button>
+          <Button size="small" icon={<RocketOutlined />} onClick={onOpenDeployPlans} className="text-xs font-extrabold">
+            发布计划
           </Button>
           <Button type="primary" size="small" onClick={onOpenDetail} className="text-xs font-extrabold">
             <FileTextOutlined />

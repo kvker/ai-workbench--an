@@ -100,9 +100,30 @@ export type DeployPlan = {
   issueName?: string
   projectName?: string
   projectCode?: string
+  projectConfigId?: number
+  gitProjectId?: number
   branchName?: string
   status?: number
   statusDesc?: string
+}
+
+export type ProjectConfig = {
+  id: number
+  projectName: string
+  projectCode?: string
+  codeRepository?: string
+  defaultBranchName?: string
+  kind?: string
+}
+
+export type CreateDeployPlanInput = {
+  issueId: number
+  projectConfigId: number
+  branchName?: string
+  planDeployDate?: string
+  reviewUser?: string
+  testUser?: string
+  remark?: string
 }
 
 export type IssueBoard = Issue & {
@@ -134,6 +155,7 @@ export type LocalWorkspace = {
 export type IssueTask = {
   issue: Issue
   board?: IssueBoard
+  deployPlans: DeployPlan[]
   workspace?: LocalWorkspace
   workspaceError?: string
   flowSteps: FlowStep[]
