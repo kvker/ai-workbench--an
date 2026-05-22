@@ -6,7 +6,7 @@ const PROJECT_ROOT_DIR = path.resolve(SERVICE_ROOT_DIR, '../..');
 function getCodexConfig() {
   return {
     appServerBin: process.env.CODEX_APP_SERVER_BIN || 'codex',
-    workspaceRoot: process.env.CODEX_WORKSPACE_ROOT || PROJECT_ROOT_DIR,
+    workspaceRoot: process.env.CODEX_WORKBENCH_ROOT || PROJECT_ROOT_DIR,
     defaultModel: process.env.CODEX_DEFAULT_MODEL || 'gpt-5.5',
     defaultEffort: process.env.CODEX_DEFAULT_EFFORT || 'medium',
     approvalPolicy: process.env.CODEX_APPROVAL_POLICY || 'never',
@@ -25,7 +25,7 @@ function resolveSessionCwd(input) {
   const resolvedRoot = path.resolve(config.workspaceRoot);
 
   if (resolvedCwd !== resolvedRoot && !resolvedCwd.startsWith(`${resolvedRoot}${path.sep}`)) {
-    const error = new Error('Session cwd must be inside CODEX_WORKSPACE_ROOT.');
+    const error = new Error('Session cwd must be inside CODEX_WORKBENCH_ROOT.');
     error.statusCode = 400;
     throw error;
   }

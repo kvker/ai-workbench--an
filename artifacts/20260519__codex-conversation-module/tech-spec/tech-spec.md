@@ -81,7 +81,7 @@ type CodexConversationEvent =
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `CODEX_WORKSPACE_ROOT` | `/Users/zweizhao/project/current` | workspace root |
+| `CODEX_WORKBENCH_ROOT` | `/Users/zweizhao/project/current` | workspace root |
 | `CODEX_DEFAULT_MODEL` | `gpt-5.5` | 默认模型 |
 | `CODEX_DEFAULT_EFFORT` | `medium` | 默认 reasoning effort |
 | `CODEX_APPROVAL_POLICY` | `never` | 默认审批策略 |
@@ -93,7 +93,7 @@ type CodexConversationEvent =
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `VITE_CODEX_API_BASE_URL` | `http://localhost:3100` | 当前 service base url |
+| `VITE_API_BASE_URL` | `http://localhost:3100` | 当前 service base url |
 
 ## 变更清单
 

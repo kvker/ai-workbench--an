@@ -1,7 +1,7 @@
 import { getStoredToken } from './authStorage'
 import { getWorkspaceUserKey } from './session'
 
-const CODEX_API_BASE_URL = import.meta.env.VITE_CODEX_API_BASE_URL ?? 'http://localhost:3100'
+const CODEX_API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://172.16.4.81:3100'
 
 export type CodexSession = {
   id: string
