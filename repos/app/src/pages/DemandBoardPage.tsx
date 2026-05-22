@@ -5,6 +5,7 @@ import { SearchOutlined } from '@ant-design/icons'
 import { CREATE_DEMAND_EVENT } from '../components/Topbar'
 import { useAppTheme } from '../providers/themeContext'
 import { authService, issueService, userService, type CreateIssueInput, type HarnessIssueGroup, type Issue, type UserBaseInfo } from '../services'
+import { createWorkflowGroups, workflowHarnessStatuses } from '../services/workflow'
 import { pageBand } from '../utils/themeClasses'
 
 const defaultHarnessGroups: HarnessIssueGroup[] = []
@@ -31,7 +32,7 @@ export function DemandBoardPage() {
 
     try {
       const nextGroups = await issueService.listMyHarness({
-        harnessStatusList: issueService.allHarnessStatuses,
+        harnessStatusList: workflowHarnessStatuses,
       })
       setGroups(nextGroups ?? defaultHarnessGroups)
       setError(null)
@@ -70,13 +71,12 @@ export function DemandBoardPage() {
 
   const visibleGroups = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase()
-    return issueService.allHarnessStatuses.map((status) => {
-      const group = groups.find((item) => item.harnessStatus === status)
-      const issues = group?.issues ?? []
+    return createWorkflowGroups(groups).map((group) => {
+      const issues = group.issues ?? []
 
       return {
-        harnessStatus: status,
-        harnessStatusDesc: group?.harnessStatusDesc || issueService.harnessStatusTitles[status],
+        harnessStatus: group.harnessStatus,
+        harnessStatusDesc: group.harnessStatusDesc,
         issues: issues.filter((issue) => {
           const matchesKeyword = !normalizedKeyword || issue.issueName.toLowerCase().includes(normalizedKeyword)
           const matchesScope =
@@ -201,7 +201,7 @@ function DemandBoardContent({
 
 function IssueLaneGrid({ groups, isDark }: { groups: HarnessIssueGroup[]; isDark: boolean }) {
   return (
-    <div className="grid auto-cols-[320px] grid-flow-col gap-3">
+    <div className="grid grid-cols-[repeat(5,minmax(180px,1fr))] gap-3">
       {groups.map((group) => (
         <Card
           key={group.harnessStatus}

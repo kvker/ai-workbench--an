@@ -162,23 +162,6 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
   }
 });
 
-router.post('/:issueId/identity/sync', async (req, res, next) => {
-  try {
-    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
-    const result = await syncKnowledgeForIdentity({
-      identity: req.body?.identity,
-      workspacePath: workspace.workspacePath,
-    });
-
-    res.json({
-      ...result,
-      workspace: toWorkspaceResponse(workspace),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.post('/:issueId/code/update', async (req, res, next) => {
   try {
     const workspace = await prepareIssueWorkspace(req);
@@ -229,7 +212,7 @@ async function prepareIssueWorkspace(req, options = {}) {
 
   if (syncKnowledge) {
     await syncKnowledgeForIdentity({
-      identity: req.query.identity || 'pm',
+      identity: 'pm',
       workspacePath: workspace.workspacePath,
     });
   }

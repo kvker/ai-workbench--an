@@ -3,7 +3,7 @@ import { getStoredToken } from './authStorage'
 import { getWorkspaceUserKey } from './session'
 import type { HarnessStatus, Issue, LocalWorkspace } from './types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://172.16.4.81:3100/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://172.16.4.81:3100'
 
 export type UploadRawInputResult = {
   status: 'uploaded' | 'skipped' | 'overwritten'
@@ -28,7 +28,7 @@ export async function uploadRawInputZip(issue: Issue, file: File, overwriteFiles
     params.set('overwriteFiles', overwriteFiles.join(','))
   }
 
-  const response = await fetch(`${API_BASE_URL}/task/${issue.id}/raw-input?${params.toString()}`, {
+  const response = await fetch(`${API_BASE_URL}/api/task/${issue.id}/raw-input?${params.toString()}`, {
     method: 'POST',
     headers: {
       'Content-Type': file.type || 'application/zip',
@@ -48,18 +48,6 @@ export async function uploadRawInputZip(issue: Issue, file: File, overwriteFiles
 export type OpenDocumentRegionResult = {
   status: 'ready'
   path: string
-}
-
-export type DemandIdentity = 'pm' | 'fe' | 'be' | 'qa'
-
-export type SyncDemandIdentityResult = {
-  status: 'synced' | 'partial'
-  identity: DemandIdentity
-  knowledgeRootDir: string
-  workspacePath: string
-  copied?: Array<{ label: string; sourcePath: string; targetPath: string }>
-  missing?: Array<{ label: string; sourcePath: string }>
-  workspace?: LocalWorkspace
 }
 
 export type UpdateCodeResult = {
@@ -113,15 +101,11 @@ export type FlowCompleteCheckResult = {
   workspace?: LocalWorkspace
 }
 
-export async function ensureWorkspace(issue: Issue, identity?: DemandIdentity) {
+export async function ensureWorkspace(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  if (identity) {
-    params.set('identity', identity)
-  }
-
-  return request<LocalWorkspace>(`/task/${issue.id}/workspace/ensure?${params.toString()}`, {
+  return request<LocalWorkspace>(`/api/task/${issue.id}/workspace/ensure?${params.toString()}`, {
     method: 'POST',
   })
 }
@@ -130,18 +114,8 @@ export async function openDocumentRegion(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<OpenDocumentRegionResult>(`/task/${issue.id}/document-region/open?${params.toString()}`, {
+  return request<OpenDocumentRegionResult>(`/api/task/${issue.id}/document-region/open?${params.toString()}`, {
     method: 'POST',
-  })
-}
-
-export async function syncDemandIdentity(issue: Issue, identity: DemandIdentity) {
-  const params = new URLSearchParams()
-  appendIssueParams(params, issue)
-
-  return request<SyncDemandIdentityResult>(`/task/${issue.id}/identity/sync?${params.toString()}`, {
-    method: 'POST',
-    body: { identity },
   })
 }
 
@@ -149,7 +123,7 @@ export async function updateCode(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<UpdateCodeResult>(`/task/${issue.id}/code/update?${params.toString()}`, {
+  return request<UpdateCodeResult>(`/api/task/${issue.id}/code/update?${params.toString()}`, {
     method: 'POST',
   })
 }
@@ -158,7 +132,7 @@ export async function startPmRawAnalysis(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<StartPmRawAnalysisResult>(`/task/${issue.id}/pm-raw/analyze?${params.toString()}`, {
+  return request<StartPmRawAnalysisResult>(`/api/task/${issue.id}/pm-raw/analyze?${params.toString()}`, {
     method: 'POST',
   })
 }
@@ -167,7 +141,7 @@ export async function listWorkspaceArtifacts(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<WorkspaceArtifactsResult>(`/task/${issue.id}/artifacts?${params.toString()}`, {
+  return request<WorkspaceArtifactsResult>(`/api/task/${issue.id}/artifacts?${params.toString()}`, {
     method: 'GET',
   })
 }
@@ -178,7 +152,7 @@ export async function previewWorkspaceArtifact(issue: Issue, artifactPath: strin
   })
   appendIssueParams(params, issue)
 
-  return request<WorkspaceArtifactPreview>(`/task/${issue.id}/artifacts/preview?${params.toString()}`, {
+  return request<WorkspaceArtifactPreview>(`/api/task/${issue.id}/artifacts/preview?${params.toString()}`, {
     method: 'GET',
   })
 }
@@ -187,7 +161,7 @@ export async function checkFlowComplete(issue: Issue, input: { harnessStatus: Ha
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<FlowCompleteCheckResult>(`/task/${issue.id}/flow/complete-check?${params.toString()}`, {
+  return request<FlowCompleteCheckResult>(`/api/task/${issue.id}/flow/complete-check?${params.toString()}`, {
     body: input,
     method: 'POST',
   })

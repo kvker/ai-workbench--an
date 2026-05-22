@@ -1,30 +1,24 @@
-import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
 import type { Issue } from '../../services'
-import type { DemandIdentity } from '../../services/task'
 import { mutedText, panel } from '../../utils/themeClasses'
 import { getIssueFlowTitle } from './demandDetailData'
-import { getDemandIdentityLabel } from './demandDetailIdentity'
 
 export function DemandInfoRegion({
   issue,
   isDark,
   isUpdatingCode,
   loading,
-  currentIdentity,
   onOpenDetail,
   onOpenDocumentRegion,
-  onOpenIdentity,
   onUpdateCode,
 }: {
   issue: Issue
   isDark: boolean
   isUpdatingCode: boolean
   loading: boolean
-  currentIdentity: DemandIdentity
   onOpenDetail: () => void
   onOpenDocumentRegion: () => void
-  onOpenIdentity: () => void
   onUpdateCode: () => void
 }) {
   return (
@@ -39,9 +33,6 @@ export function DemandInfoRegion({
         <div className="flex flex-wrap justify-end gap-2">
           <Button size="small" icon={<FolderOpenOutlined />} onClick={onOpenDocumentRegion} className="text-xs font-extrabold">
             打开文档区
-          </Button>
-          <Button size="small" icon={<UserSwitchOutlined />} onClick={onOpenIdentity} className="text-xs font-extrabold">
-            {getDemandIdentityLabel(currentIdentity)}
           </Button>
           <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingCode} onClick={onUpdateCode} className="text-xs font-extrabold">
             更新代码

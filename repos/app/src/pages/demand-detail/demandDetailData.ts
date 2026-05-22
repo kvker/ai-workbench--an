@@ -1,5 +1,5 @@
-import { issueService, taskService, type DocumentSummary, type FlowStep, type HarnessStatus, type Issue, type IssueTask } from '../../services'
-import { getDemandIdentityStorageKey, readStoredDemandIdentity } from './demandDetailIdentity'
+import { issueService, taskService, type DocumentSummary, type FlowStep, type Issue, type IssueTask } from '../../services'
+import { createWorkflowSteps, getWorkflowStageTitle } from '../../services/workflow'
 
 const emptyIssue: Issue = {
   id: 0,
@@ -19,10 +19,9 @@ export function createEmptyIssueTask(): IssueTask {
 
 export async function loadIssueTask(issueId: string): Promise<IssueTask> {
   const issue = await issueService.detail(issueId)
-  const identity = readStoredDemandIdentity(getDemandIdentityStorageKey(issueId || String(issue.id || '')))
   const [boardResult, workspaceResult, artifactsResult] = await Promise.allSettled([
     issueService.issueBoard(issueId),
-    taskService.ensureWorkspace(issue, identity),
+    taskService.ensureWorkspace(issue),
     taskService.listWorkspaceArtifacts(issue),
   ])
   const board = boardResult.status === 'fulfilled' && boardResult.value.id ? boardResult.value : undefined
@@ -92,34 +91,11 @@ export function createFlowCompletionPrompt({
 }
 
 export function getIssueFlowTitle(issue: Issue) {
-  if (issue.harnessStatusDesc) {
-    return issue.harnessStatusDesc
-  }
-
-  if (issue.harnessStatus !== undefined) {
-    return issueService.harnessStatusTitles[issue.harnessStatus]
-  }
-
-  return issue.issueStatusDesc || issueService.issueStatusTitles[issue.status]
+  return issue.harnessStatus !== undefined ? getWorkflowStageTitle(issue) : issue.issueStatusDesc || issueService.issueStatusTitles[issue.status]
 }
 
 function createFlowSteps(issue: Issue): FlowStep[] {
-  return Object.entries(issueService.harnessStatusTitles).map(([status, title]) =>
-    createFlowStep(Number(status), title, issue.harnessStatus ?? 0),
-  )
-}
-
-function createFlowStep(targetStatus: number, title: string, currentStatus: number): FlowStep {
-  const done = currentStatus > targetStatus
-  const current = currentStatus === targetStatus
-
-  return {
-    sequence: targetStatus,
-    harnessStatus: targetStatus as HarnessStatus,
-    title,
-    state: current ? '当前状态' : done ? '已完成' : '未开始',
-    status: current ? 'current' : done ? 'done' : 'locked',
-  }
+  return createWorkflowSteps(issue)
 }
 
 function formatFileSize(size: number) {
