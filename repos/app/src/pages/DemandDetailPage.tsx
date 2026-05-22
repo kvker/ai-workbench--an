@@ -24,6 +24,8 @@ import {
   readStoredDemandIdentity,
 } from './demand-detail/demandDetailIdentity'
 
+const DOCUMENT_REGION_BASE_URL = import.meta.env.VITE_DOCUMENT_REGION_BASE_URL ?? 'http://172.16.4.81:8080/'
+
 type FlowCompletionPromptRequest = {
   key: number
   alias: string
@@ -186,13 +188,26 @@ export function DemandDetailPage() {
   const openDocumentRegion = async () => {
     modal.info({
       title: '打开文档区',
-      content: '当前打开该需求在本机工作区中的子工程目录。',
+      content: '将在新标签页打开该需求对应的文档区。',
       okText: '打开',
       async onOk() {
+        const documentRegionWindow = window.open('about:blank', '_blank')
+
         try {
-          await taskService.openDocumentRegion(issue)
+          const result = await taskService.openDocumentRegion(issue)
+          const documentRegionUrl = new URL(DOCUMENT_REGION_BASE_URL)
+          documentRegionUrl.searchParams.set('folder', result.path)
+
+          if (documentRegionWindow) {
+            documentRegionWindow.opener = null
+            documentRegionWindow.location.href = documentRegionUrl.toString()
+          } else {
+            window.open(documentRegionUrl.toString(), '_blank', 'noopener,noreferrer')
+          }
+
           messageApi.success('已打开文档区')
         } catch (openError) {
+          documentRegionWindow?.close()
           messageApi.error(openError instanceof Error ? openError.message : '打开文档区失败')
         }
       },

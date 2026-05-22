@@ -107,6 +107,7 @@
 | [20260520__detail-load-pm-skills](artifacts/20260520__detail-load-pm-skills/) | 请求详情页时按流程自动加载 PM skills 到需求工作区 | 活跃 |
 | [20260521__detail-knowledge-role-sync](artifacts/20260521__detail-knowledge-role-sync/) | 详情页按职能加载 skills/conventions 并全量加载 background | 活跃 |
 | [20260521__split-large-frontend-files](artifacts/20260521__split-large-frontend-files/) | 拆分过大的 Codex 对话模块与详情页组件文件 | 活跃 |
+| [20260522__document-region-new-tab](artifacts/20260522__document-region-new-tab/) | 打开文档区改为前端新标签打开 Web 文档区 | 已完成 |
 
 ## Skill 路由
 

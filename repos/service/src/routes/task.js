@@ -152,10 +152,9 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
     const documentRegionPath = workspace.workspacePath;
 
     await fs.mkdir(documentRegionPath, { recursive: true });
-    await openPath(documentRegionPath);
 
     res.json({
-      status: 'opened',
+      status: 'ready',
       path: documentRegionPath,
     });
   } catch (error) {
@@ -507,23 +506,6 @@ async function pathExists(targetPath) {
 
     throw error;
   }
-}
-
-async function openPath(targetPath) {
-  const platform = os.platform();
-  const command = platform === 'darwin' ? 'open' : platform === 'win32' ? 'cmd' : 'xdg-open';
-  const args = platform === 'win32' ? ['/c', 'start', '', targetPath] : [targetPath];
-
-  await new Promise((resolve, reject) => {
-    execFile(command, args, (error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve();
-    });
-  });
 }
 
 async function extractZipToRawInput({ rawInputDir, tmpZipPath, overwriteFiles }) {

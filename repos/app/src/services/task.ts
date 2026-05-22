@@ -3,7 +3,7 @@ import { getStoredToken } from './authStorage'
 import { getWorkspaceUserKey } from './session'
 import type { HarnessStatus, Issue, LocalWorkspace } from './types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3100/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://172.16.4.81:3100/api'
 
 export type UploadRawInputResult = {
   status: 'uploaded' | 'skipped' | 'overwritten'
@@ -46,7 +46,7 @@ export async function uploadRawInputZip(issue: Issue, file: File, overwriteFiles
 }
 
 export type OpenDocumentRegionResult = {
-  status: 'opened'
+  status: 'ready'
   path: string
 }
 
