@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { App as AntdApp, FloatButton, message } from 'antd'
+import { FloatButton, message } from 'antd'
 import { useParams } from 'react-router-dom'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
 import { useAppTheme } from '../providers/themeContext'
@@ -33,7 +33,6 @@ export function DemandDetailPage() {
   const [artifactRefreshKey, setArtifactRefreshKey] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
   const { isDark } = useAppTheme()
-  const { modal } = AntdApp.useApp()
   const [messageApi, contextHolder] = message.useMessage()
   const loadTask = useCallback(() => loadIssueTask(demandId), [demandId])
   const { data: task, error, loading } = useIssueTask(loadTask, reloadKey)
@@ -57,32 +56,25 @@ export function DemandDetailPage() {
     })
   }
   const openDocumentRegion = async () => {
-    modal.info({
-      title: '打开文档区',
-      content: '将在新标签页打开该需求对应的文档区。',
-      okText: '打开',
-      async onOk() {
-        const documentRegionWindow = window.open('about:blank', '_blank')
+    const documentRegionWindow = window.open('about:blank', '_blank')
 
-        try {
-          const result = await taskService.openDocumentRegion(issue)
-          const documentRegionUrl = new URL(DOCUMENT_REGION_BASE_URL)
-          documentRegionUrl.searchParams.set('folder', result.path)
+    try {
+      const result = await taskService.openDocumentRegion(issue)
+      const documentRegionUrl = new URL(DOCUMENT_REGION_BASE_URL)
+      documentRegionUrl.searchParams.set('folder', result.path)
 
-          if (documentRegionWindow) {
-            documentRegionWindow.opener = null
-            documentRegionWindow.location.href = documentRegionUrl.toString()
-          } else {
-            window.open(documentRegionUrl.toString(), '_blank', 'noopener,noreferrer')
-          }
+      if (documentRegionWindow) {
+        documentRegionWindow.opener = null
+        documentRegionWindow.location.href = documentRegionUrl.toString()
+      } else {
+        window.open(documentRegionUrl.toString(), '_blank', 'noopener,noreferrer')
+      }
 
-          messageApi.success('已打开文档区')
-        } catch (openError) {
-          documentRegionWindow?.close()
-          messageApi.error(openError instanceof Error ? openError.message : '打开文档区失败')
-        }
-      },
-    })
+      messageApi.success('已打开文档区')
+    } catch (openError) {
+      documentRegionWindow?.close()
+      messageApi.error(openError instanceof Error ? openError.message : '打开文档区失败')
+    }
   }
 
   const updateFiles = async () => {
