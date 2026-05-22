@@ -50,10 +50,14 @@ export type OpenDocumentRegionResult = {
   path: string
 }
 
-export type UpdateCodeResult = {
-  status: 'updated' | 'partial'
-  updated?: Array<{ path: string; branchName: string; stdout?: string; stderr?: string }>
-  failed?: Array<{ path: string; message: string }>
+export type UpdateFilesResult = {
+  status: 'synced' | 'partial' | 'skipped'
+  identity: string
+  knowledgeRootDir: string
+  workspacePath: string
+  copied?: Array<{ label: string; sourcePath: string; targetPath: string }>
+  missing?: Array<{ label: string; sourcePath: string }>
+  reason?: string
   workspace?: LocalWorkspace
 }
 
@@ -119,11 +123,11 @@ export async function openDocumentRegion(issue: Issue) {
   })
 }
 
-export async function updateCode(issue: Issue) {
+export async function updateFiles(issue: Issue) {
   const params = new URLSearchParams()
   appendIssueParams(params, issue)
 
-  return request<UpdateCodeResult>(`/api/task/${issue.id}/code/update?${params.toString()}`, {
+  return request<UpdateFilesResult>(`/api/task/${issue.id}/files/update?${params.toString()}`, {
     method: 'POST',
   })
 }

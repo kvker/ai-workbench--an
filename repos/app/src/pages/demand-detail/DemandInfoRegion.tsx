@@ -7,19 +7,19 @@ import { getIssueFlowTitle } from './demandDetailData'
 export function DemandInfoRegion({
   issue,
   isDark,
-  isUpdatingCode,
+  isUpdatingFiles,
   loading,
   onOpenDetail,
   onOpenDocumentRegion,
-  onUpdateCode,
+  onUpdateFiles,
 }: {
   issue: Issue
   isDark: boolean
-  isUpdatingCode: boolean
+  isUpdatingFiles: boolean
   loading: boolean
   onOpenDetail: () => void
   onOpenDocumentRegion: () => void
-  onUpdateCode: () => void
+  onUpdateFiles: () => void
 }) {
   return (
     <section className={`rounded-lg border p-3 ${panel(isDark)}`}>
@@ -34,8 +34,8 @@ export function DemandInfoRegion({
           <Button size="small" icon={<FolderOpenOutlined />} onClick={onOpenDocumentRegion} className="text-xs font-extrabold">
             打开文档区
           </Button>
-          <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingCode} onClick={onUpdateCode} className="text-xs font-extrabold">
-            更新代码
+          <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingFiles} onClick={onUpdateFiles} className="text-xs font-extrabold">
+            更新文件
           </Button>
           <Button type="primary" size="small" onClick={onOpenDetail} className="text-xs font-extrabold">
             <FileTextOutlined />

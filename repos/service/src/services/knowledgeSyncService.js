@@ -14,11 +14,11 @@ const ROLE_SOURCE_DIRS = {
   qa: { aliases: ['qa', 'test', 'quality'], skills: ['qa', 'test', 'quality'], conventions: ['qa', 'test', 'quality'] },
 };
 
-async function syncKnowledgeForIdentity({ identity, workspacePath }) {
-  return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeForIdentityUnlocked({ identity, workspacePath }));
+async function syncKnowledgeForIdentity({ identity, workspacePath, force = true }) {
+  return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force }));
 }
 
-async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
+async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force }) {
   const role = normalizeIdentity(identity);
 
   if (!workspacePath) {
@@ -37,6 +37,21 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
 
   await assertDirectory(knowledgeRootDir, 'KNOWLEDGE_ROOT_DIR does not exist.');
   await assertDirectory(workspacePath, 'Workspace does not exist.');
+
+  const targetPaths = resolveTargetPaths(workspacePath);
+
+  if (!force && await hasSyncedKnowledgeFiles(targetPaths)) {
+    return {
+      status: 'skipped',
+      identity: role,
+      knowledgeRootDir,
+      workspacePath,
+      copied: [],
+      missing: [],
+      reason: 'knowledge files already exist',
+    };
+  }
+
   await refreshKnowledgeRoot(knowledgeRootDir);
 
   const copied = [];
@@ -44,7 +59,7 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
 
   await replaceDirectory({
     sourcePath: path.join(knowledgeRootDir, 'background'),
-    targetPath: path.join(workspacePath, 'background'),
+    targetPath: targetPaths.background,
     label: 'background',
     copied,
     missing,
@@ -55,7 +70,7 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
       createOptionalSourceGroup(knowledgeRootDir, 'conventions', ROLE_SOURCE_DIRS[role].conventions),
       createOptionalSourceGroup(knowledgeRootDir, 'conventions', ['shared']),
     ],
-    targetPath: path.join(workspacePath, 'conventions'),
+    targetPath: targetPaths.conventions,
     label: 'conventions',
     copied,
     missing,
@@ -66,7 +81,7 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath }) {
       createOptionalSourceGroup(knowledgeRootDir, 'skills', ['shared']),
       createRoleSourceGroup(knowledgeRootDir, 'skills', ROLE_SOURCE_DIRS[role].skills),
     ],
-    targetPath: path.join(workspacePath, '.codex', 'skills'),
+    targetPath: targetPaths.skills,
     label: 'skills',
     copied,
     missing,
@@ -132,6 +147,46 @@ function createOptionalSourceGroup(knowledgeRootDir, category, dirNames) {
 
 function resolveSourcePaths(knowledgeRootDir, category, dirNames) {
   return [...new Set(dirNames.map((dirName) => path.join(knowledgeRootDir, category, dirName)))];
+}
+
+function resolveTargetPaths(workspacePath) {
+  return {
+    background: path.join(workspacePath, 'background'),
+    conventions: path.join(workspacePath, 'conventions'),
+    skills: path.join(workspacePath, '.codex', 'skills'),
+  };
+}
+
+async function hasSyncedKnowledgeFiles(targetPaths) {
+  for (const targetPath of Object.values(targetPaths)) {
+    if (!await hasAnyFile(targetPath)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function hasAnyFile(targetPath) {
+  if (!(await isDirectory(targetPath))) {
+    return false;
+  }
+
+  const entries = await fs.readdir(targetPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entryPath = path.join(targetPath, entry.name);
+
+    if (entry.isFile()) {
+      return true;
+    }
+
+    if (entry.isDirectory() && await hasAnyFile(entryPath)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function replaceDirectory({ sourcePath, targetPath, label, copied, missing }) {

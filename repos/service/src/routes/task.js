@@ -4,7 +4,6 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
-const { updateWorkspaceCode } = require('../services/codeUpdateService');
 const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
 const { startPmRawAnalysis } = require('../services/pmRawAnalysisService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
@@ -162,10 +161,14 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
   }
 });
 
-router.post('/:issueId/code/update', async (req, res, next) => {
+router.post('/:issueId/files/update', async (req, res, next) => {
   try {
-    const workspace = await prepareIssueWorkspace(req);
-    const result = await updateWorkspaceCode(workspace.workspacePath);
+    const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
+    const result = await syncKnowledgeForIdentity({
+      identity: 'pm',
+      workspacePath: workspace.workspacePath,
+      force: true,
+    });
 
     res.json({
       ...result,
@@ -195,7 +198,7 @@ router.post('/:issueId/pm-raw/analyze', async (req, res, next) => {
 });
 
 async function prepareIssueWorkspace(req, options = {}) {
-  const { syncKnowledge = true } = options;
+  const { syncKnowledge = true, forceSyncKnowledge = false } = options;
   const issueId = String(req.params.issueId || '').trim();
 
   if (!issueId) {
@@ -214,6 +217,7 @@ async function prepareIssueWorkspace(req, options = {}) {
     await syncKnowledgeForIdentity({
       identity: 'pm',
       workspacePath: workspace.workspacePath,
+      force: forceSyncKnowledge,
     });
   }
 

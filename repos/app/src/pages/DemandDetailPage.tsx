@@ -25,7 +25,7 @@ type FlowCompletionPromptRequest = {
 export function DemandDetailPage() {
   const { demandId = '' } = useParams()
   const [isDetailOpen, setIsDetailOpen] = useState(false)
-  const [isUpdatingCode, setIsUpdatingCode] = useState(false)
+  const [isUpdatingFiles, setIsUpdatingFiles] = useState(false)
   const [previewDocument, setPreviewDocument] = useState<DocumentSummary | null>(null)
   const [previewContent, setPreviewContent] = useState('')
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
@@ -85,24 +85,24 @@ export function DemandDetailPage() {
     })
   }
 
-  const updateCode = async () => {
-    setIsUpdatingCode(true)
+  const updateFiles = async () => {
+    setIsUpdatingFiles(true)
 
     try {
-      const result = await taskService.updateCode(issue)
-      const failedCount = result.failed?.length ?? 0
+      const result = await taskService.updateFiles(issue)
+      const missingCount = result.missing?.length ?? 0
 
-      if (failedCount > 0) {
-        messageApi.warning(`代码已部分更新，${failedCount} 个仓库失败`)
+      if (missingCount > 0) {
+        messageApi.warning(`文件已部分更新，${missingCount} 类来源缺失`)
       } else {
-        messageApi.success('代码已更新')
+        messageApi.success('文件已更新')
       }
 
       setReloadKey((value) => value + 1)
     } catch (updateError) {
-      messageApi.error(updateError instanceof Error ? updateError.message : '更新代码失败')
+      messageApi.error(updateError instanceof Error ? updateError.message : '更新文件失败')
     } finally {
-      setIsUpdatingCode(false)
+      setIsUpdatingFiles(false)
     }
   }
 
@@ -145,11 +145,11 @@ export function DemandDetailPage() {
         <DemandInfoRegion
           issue={issue}
           isDark={isDark}
-          isUpdatingCode={isUpdatingCode}
+          isUpdatingFiles={isUpdatingFiles}
           loading={loading}
           onOpenDetail={() => setIsDetailOpen(true)}
           onOpenDocumentRegion={openDocumentRegion}
-          onUpdateCode={updateCode}
+          onUpdateFiles={updateFiles}
         />
         <WorkflowRegion
           currentFlowStepIndex={currentFlowStepIndex}
