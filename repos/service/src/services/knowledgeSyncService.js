@@ -14,6 +14,16 @@ const ROLE_SOURCE_DIRS = {
   qa: { aliases: ['qa', 'test', 'quality'], skills: ['qa', 'test', 'quality'], conventions: ['qa', 'test', 'quality'] },
 };
 
+const HARNESS_AGENT_FILE_MAPPINGS = [
+  { sourceDirs: ['frontend', 'fe'], targetPath: ['fe.md'] },
+  { sourceDirs: ['backend', 'be'], targetPath: ['be.md'] },
+  { sourceDirs: ['product', 'pm'], targetPath: ['pm.md'] },
+  { sourceDirs: ['test', 'qa'], targetPath: ['qa.md'] },
+  { sourceDirs: ['shared'], targetPath: ['shared', 'common.md'] },
+  { sourceDirs: ['delivery'], targetPath: ['shared', 'delivery.md'] },
+  { sourceDirs: ['engineering'], targetPath: ['shared', 'engineering.md'] },
+];
+
 async function syncKnowledgeForIdentity({ identity, workspacePath, force = true }) {
   return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force }));
 }
@@ -40,7 +50,7 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force
 
   const targetPaths = resolveTargetPaths(workspacePath);
 
-  if (!force && await hasSyncedKnowledgeFiles(targetPaths)) {
+  if (!force && await hasSyncedKnowledgeFiles(targetPaths, knowledgeRootDir)) {
     return {
       status: 'skipped',
       identity: role,
@@ -85,6 +95,12 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force
     label: 'skills',
     copied,
     missing,
+  });
+
+  await replaceHarnessAgentFiles({
+    knowledgeRootDir,
+    targetPath: targetPaths.agents,
+    copied,
   });
 
   return {
@@ -154,17 +170,34 @@ function resolveTargetPaths(workspacePath) {
     background: path.join(workspacePath, 'background'),
     conventions: path.join(workspacePath, 'conventions'),
     skills: path.join(workspacePath, '.codex', 'skills'),
+    agents: path.join(workspacePath, 'agents'),
   };
 }
 
-async function hasSyncedKnowledgeFiles(targetPaths) {
-  for (const targetPath of Object.values(targetPaths)) {
+async function hasSyncedKnowledgeFiles(targetPaths, knowledgeRootDir) {
+  const requiredTargetPaths = [targetPaths.background, targetPaths.conventions, targetPaths.skills];
+
+  if (await hasAnyMappedHarnessAgentFile(knowledgeRootDir)) {
+    requiredTargetPaths.push(targetPaths.agents);
+  }
+
+  for (const targetPath of requiredTargetPaths) {
     if (!await hasAnyFile(targetPath)) {
       return false;
     }
   }
 
   return true;
+}
+
+async function hasAnyMappedHarnessAgentFile(knowledgeRootDir) {
+  for (const mapping of HARNESS_AGENT_FILE_MAPPINGS) {
+    if (await findFirstAgentFile(knowledgeRootDir, mapping.sourceDirs)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function hasAnyFile(targetPath) {
@@ -229,6 +262,36 @@ async function replaceMergedDirectories({ sourceGroups, targetPath, label, copie
       copied.push({ label, sourcePath, targetPath });
     }
   }
+}
+
+async function replaceHarnessAgentFiles({ knowledgeRootDir, targetPath, copied }) {
+  await fs.rm(targetPath, { recursive: true, force: true });
+  await fs.mkdir(targetPath, { recursive: true });
+
+  for (const mapping of HARNESS_AGENT_FILE_MAPPINGS) {
+    const sourcePath = await findFirstAgentFile(knowledgeRootDir, mapping.sourceDirs);
+
+    if (!sourcePath) {
+      continue;
+    }
+
+    const targetFilePath = path.join(targetPath, ...mapping.targetPath);
+    await fs.mkdir(path.dirname(targetFilePath), { recursive: true });
+    await fs.copyFile(sourcePath, targetFilePath);
+    copied.push({ label: 'agents', sourcePath, targetPath: targetFilePath });
+  }
+}
+
+async function findFirstAgentFile(knowledgeRootDir, sourceDirs) {
+  for (const sourceDir of sourceDirs) {
+    const sourcePath = path.join(knowledgeRootDir, 'agents', sourceDir, 'AGENTS.md');
+
+    if (await isFile(sourcePath)) {
+      return sourcePath;
+    }
+  }
+
+  return null;
 }
 
 async function copyDirectoryContents(sourcePath, targetPath) {
@@ -300,8 +363,23 @@ async function isDirectory(targetPath) {
   }
 }
 
+async function isFile(targetPath) {
+  try {
+    const stats = await fs.stat(targetPath);
+    return stats.isFile();
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+
+    return false;
+  }
+}
+
 module.exports = {
+  HARNESS_AGENT_FILE_MAPPINGS,
   ROLE_SOURCE_DIRS,
   normalizeIdentity,
+  replaceHarnessAgentFiles,
   syncKnowledgeForIdentity,
 };
