@@ -6,7 +6,9 @@ import type {
   Issue,
   IssueBoard,
   IssueHarnessListQuery,
+  IssueTag,
   IssueStatus,
+  UpdateIssueInput,
 } from './types'
 
 const DEVOPS_API_BASE_URL = import.meta.env.VITE_DEVOPS_API_BASE_URL ?? 'http://devops-api.dahuangf.com:8090/devops'
@@ -38,6 +40,15 @@ export const harnessStatusTitles: Record<HarnessStatus, string> = {
 
 export const allHarnessStatuses: HarnessStatus[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
+export const issueTagOptions: { label: string; value: IssueTag }[] = [
+  { label: '财务', value: 'finance' },
+  { label: '业务', value: 'business' },
+  { label: '平台', value: 'platform' },
+  { label: '交付', value: 'delivery' },
+  { label: '资管', value: 'asset' },
+  { label: '公共', value: 'common' },
+]
+
 export async function listMyHarness(query: IssueHarnessListQuery = {}) {
   return request<HarnessIssueGroup[]>(`/issue/listMyHarness${toHarnessQueryString(query)}`, {
     baseUrl: DEVOPS_API_BASE_URL,
@@ -58,6 +69,14 @@ export async function issueBoard(issueId: number | string) {
 
 export async function create(input: CreateIssueInput) {
   return request<number>('/issue/create', {
+    baseUrl: DEVOPS_API_BASE_URL,
+    body: input,
+    method: 'POST',
+  })
+}
+
+export async function update(input: UpdateIssueInput) {
+  return request<boolean>('/issue/update', {
     baseUrl: DEVOPS_API_BASE_URL,
     body: input,
     method: 'POST',

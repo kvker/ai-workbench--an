@@ -61,6 +61,8 @@ export type IssueType = 1 | 2 | 3 | 4
 
 export type IssueSource = 1 | 2 | 3 | 4
 
+export type IssueTag = 'finance' | 'business' | 'platform' | 'delivery' | 'asset' | 'common'
+
 export type Issue = {
   id: number
   issueName: string
@@ -81,6 +83,7 @@ export type Issue = {
   assignedUser?: string
   createdAt?: string
   stakeholders?: string[]
+  tags?: IssueTag[]
   isHarness?: boolean
   wsBranchName?: string
   harnessStatus?: HarnessStatus
@@ -142,7 +145,12 @@ export type CreateIssueInput = {
   requireDetailUrl?: string
   assignedUser: string
   stakeholders?: string[]
+  tags?: IssueTag[]
   isHarness?: boolean
+}
+
+export type UpdateIssueInput = CreateIssueInput & {
+  id: number
 }
 
 export type LocalWorkspace = {

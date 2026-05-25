@@ -104,6 +104,7 @@ export function DemandBoardPage() {
         ...values,
         requireDetailUrl: 'https://www.baidu.com',
         stakeholders: values.stakeholders ?? [],
+        tags: values.tags ?? [],
         isHarness: true,
       })
       form.resetFields()
@@ -355,6 +356,9 @@ function CreateIssueDialog({
             options={userOptions}
             placeholder="选择干系人"
           />
+        </Form.Item>
+        <Form.Item label="标签" name="tags">
+          <Select mode="multiple" options={issueService.issueTagOptions} placeholder="选择标签" />
         </Form.Item>
         <Form.Item label="需求描述" name="remark">
           <Input.TextArea placeholder="简要说明目标、背景或范围" autoSize={{ minRows: 3, maxRows: 5 }} />

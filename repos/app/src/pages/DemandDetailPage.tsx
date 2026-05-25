@@ -3,13 +3,26 @@ import { FloatButton, message } from 'antd'
 import { useParams } from 'react-router-dom'
 import { CodexConversationModule } from '../components/codex-conversation/CodexConversationModule'
 import { useAppTheme } from '../providers/themeContext'
-import { deployPlanService, taskService, type DeployPlan, type DocumentSummary, type FlowStep, type IssueTask, type ProjectConfig } from '../services'
+import {
+  deployPlanService,
+  issueService,
+  taskService,
+  userService,
+  type DeployPlan,
+  type DocumentSummary,
+  type FlowStep,
+  type IssueTask,
+  type ProjectConfig,
+  type UpdateIssueInput,
+  type UserBaseInfo,
+} from '../services'
 import { pageBand, panel } from '../utils/themeClasses'
 import { ArtifactPreviewDialog } from './demand-detail/ArtifactPreviewDialog'
 import { ArtifactRegion } from './demand-detail/ArtifactRegion'
 import { DeployPlanDialog } from './demand-detail/DeployPlanDialog'
 import { DemandInfoRegion } from './demand-detail/DemandInfoRegion'
 import { DetailDialog } from './demand-detail/DetailDialog'
+import { EditIssueDialog } from './demand-detail/EditIssueDialog'
 import { WorkflowRegion } from './demand-detail/WorkflowRegion'
 import { createEmptyIssueTask, createIssueBranchName, loadIssueTask } from './demand-detail/demandDetailData'
 
@@ -26,6 +39,8 @@ type FlowCompletionPromptRequest = {
 export function DemandDetailPage() {
   const { demandId = '' } = useParams()
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isSavingIssue, setIsSavingIssue] = useState(false)
   const [isDeployPlanOpen, setIsDeployPlanOpen] = useState(false)
   const [isCreatingDeployPlan, setIsCreatingDeployPlan] = useState(false)
   const [deletingDeployPlanId, setDeletingDeployPlanId] = useState<number | null>(null)
@@ -33,6 +48,8 @@ export function DemandDetailPage() {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false)
   const [deployPlanOverride, setDeployPlanOverride] = useState<DeployPlan[] | null>(null)
   const [projects, setProjects] = useState<ProjectConfig[]>([])
+  const [users, setUsers] = useState<UserBaseInfo[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
   const [isUpdatingFiles, setIsUpdatingFiles] = useState(false)
   const [previewDocument, setPreviewDocument] = useState<DocumentSummary | null>(null)
   const [previewContent, setPreviewContent] = useState('')
@@ -57,6 +74,42 @@ export function DemandDetailPage() {
   const refreshArtifacts = useCallback(() => {
     setArtifactRefreshKey((value) => value + 1)
   }, [])
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true)
+
+    try {
+      setUsers(await userService.listAll())
+    } catch (userError) {
+      messageApi.error(userError instanceof Error ? userError.message : '用户列表加载失败')
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [messageApi])
+  const openEditIssue = () => {
+    setIsEditOpen(true)
+    void loadUsers()
+  }
+  const saveIssue = async (values: UpdateIssueInput) => {
+    setIsSavingIssue(true)
+
+    try {
+      await issueService.update({
+        ...values,
+        id: issue.id,
+        requireDetailUrl: values.requireDetailUrl ?? issue.requireDetailUrl,
+        stakeholders: values.stakeholders ?? [],
+        tags: values.tags ?? [],
+        isHarness: values.isHarness ?? issue.isHarness,
+      })
+      messageApi.success('需求已更新')
+      setIsEditOpen(false)
+      setReloadKey((value) => value + 1)
+    } catch (saveError) {
+      messageApi.error(saveError instanceof Error ? saveError.message : '需求更新失败')
+    } finally {
+      setIsSavingIssue(false)
+    }
+  }
   const refreshDeployPlans = useCallback(async () => {
     const nextDeployPlans = await deployPlanService.listByIssue(issue.id)
     setDeployPlanOverride(nextDeployPlans)
@@ -269,6 +322,7 @@ export function DemandDetailPage() {
           isDark={isDark}
           isUpdatingFiles={isUpdatingFiles}
           loading={loading}
+          onEditIssue={openEditIssue}
           onOpenDetail={() => setIsDetailOpen(true)}
           onOpenDocumentRegion={openDocumentRegion}
           onOpenDeployPlans={openDeployPlans}
@@ -305,6 +359,15 @@ export function DemandDetailPage() {
       />
 
       <DetailDialog issue={issue} workspacePath={workspace?.workspacePath} branch={branch} open={isDetailOpen} onClose={() => setIsDetailOpen(false)} />
+      <EditIssueDialog
+        issue={issue}
+        isSaving={isSavingIssue}
+        open={isEditOpen}
+        users={users}
+        usersLoading={usersLoading}
+        onCancel={() => setIsEditOpen(false)}
+        onSave={saveIssue}
+      />
       <DeployPlanDialog
         deployPlans={deployPlans}
         deletingDeployPlanId={deletingDeployPlanId}

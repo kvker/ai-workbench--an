@@ -1,14 +1,14 @@
-import { CloudSyncOutlined, FileTextOutlined, FolderOpenOutlined, RocketOutlined } from '@ant-design/icons'
+import { CloudSyncOutlined, EditOutlined, FileTextOutlined, FolderOpenOutlined, RocketOutlined } from '@ant-design/icons'
 import { Button } from 'antd'
-import type { Issue } from '../../services'
+import { issueService, type Issue } from '../../services'
 import { mutedText, panel } from '../../utils/themeClasses'
-import { getIssueFlowTitle } from './demandDetailData'
 
 export function DemandInfoRegion({
   issue,
   isDark,
   isUpdatingFiles,
   loading,
+  onEditIssue,
   onOpenDetail,
   onOpenDocumentRegion,
   onOpenDeployPlans,
@@ -18,18 +18,31 @@ export function DemandInfoRegion({
   isDark: boolean
   isUpdatingFiles: boolean
   loading: boolean
+  onEditIssue: () => void
   onOpenDetail: () => void
   onOpenDocumentRegion: () => void
   onOpenDeployPlans: () => void
   onUpdateFiles: () => void
 }) {
+  const tagText = formatIssueTags(issue)
+
   return (
     <section className={`rounded-lg border p-3 ${panel(isDark)}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="break-words text-base font-extrabold leading-snug">{loading ? '正在加载...' : issue.issueName}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="break-words text-base font-extrabold leading-snug">{loading ? '正在加载...' : issue.issueName}</div>
+            <Button
+              aria-label="编辑需求"
+              disabled={loading || !issue.id}
+              icon={<EditOutlined />}
+              size="small"
+              type="text"
+              onClick={onEditIssue}
+            />
+          </div>
           <div className={`mt-1 text-xs font-bold ${mutedText(isDark)}`}>
-            {getIssueFlowTitle(issue)} / {issue.assignedUserName || issue.assignedUser || '未指派'}
+            标签: {tagText}
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
@@ -50,4 +63,13 @@ export function DemandInfoRegion({
       </div>
     </section>
   )
+}
+
+function formatIssueTags(issue: Issue) {
+  if (!issue.tags || issue.tags.length === 0) {
+    return '无'
+  }
+
+  const tagLabelByValue = new Map(issueService.issueTagOptions.map((option) => [option.value, option.label]))
+  return issue.tags.map((tag) => tagLabelByValue.get(tag) ?? tag).join(',')
 }
