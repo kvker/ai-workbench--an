@@ -55,7 +55,7 @@ export type UserBaseInfo = {
 
 export type IssueStatus = 1 | 2 | 3 | 4
 
-export type HarnessStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+export type HarnessStatus = 'pm' | 'fe' | 'be' | 'qa' | 'archive' | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 export type IssueType = 1 | 2 | 3 | 4
 

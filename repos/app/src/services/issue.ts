@@ -19,6 +19,11 @@ export const issueStatusTitles: Record<IssueStatus, string> = {
 }
 
 export const harnessStatusTitles: Record<HarnessStatus, string> = {
+  pm: '产品规划',
+  fe: '前端开发',
+  be: '后端开发',
+  qa: '测试验收',
+  archive: '归档',
   0: '需求分析',
   1: '原型开发',
   2: '需求交付',

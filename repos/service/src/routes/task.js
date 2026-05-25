@@ -13,6 +13,11 @@ const router = express.Router();
 const ZIP_BODY_LIMIT = '100mb';
 const RAW_INPUT_OVERWRITE_FILES = [];
 const FLOW_STATUS_NODE_MAP = {
+  pm: 'pm-raw',
+  fe: 'coding',
+  be: 'dev-handoff',
+  qa: 'qa-testing',
+  archive: 'archive',
   0: 'pm-raw',
   1: 'pm-demo',
   2: 'pm-handoff',

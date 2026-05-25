@@ -88,6 +88,8 @@
 | [flow-policy](conventions/flow-policy.md) | 流程轻重判断 |
 | [document](conventions/document.md) | 文档编写规范 |
 | [frontend-structure](conventions/frontend-structure.md) | 前端页面与区域命名规范 |
+| [rules](conventions/rules.md) | 对话过程中的长期记忆感知与沉淀 |
+| [memories](conventions/memories/AGENTS.md) | 对话优化记录索引 |
 
 ## 当前活跃 Artifacts
 
