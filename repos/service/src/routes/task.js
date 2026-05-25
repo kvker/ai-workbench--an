@@ -18,16 +18,6 @@ const FLOW_STATUS_NODE_MAP = {
   be: 'dev-handoff',
   qa: 'qa-testing',
   archive: 'archive',
-  0: 'pm-raw',
-  1: 'pm-demo',
-  2: 'pm-handoff',
-  3: 'dev-confirm',
-  4: 'coding',
-  5: 'dev-handoff',
-  6: 'qa-confirm',
-  7: 'qa-testing',
-  8: 'qa-handoff',
-  9: 'archive',
 };
 const execFileAsync = promisify(execFile);
 
@@ -365,10 +355,8 @@ function resolveFlowNode({ harnessStatus, node }) {
     return sanitizedNode;
   }
 
-  const numericStatus = Number(harnessStatus);
-
-  if (Number.isInteger(numericStatus) && FLOW_STATUS_NODE_MAP[numericStatus]) {
-    return FLOW_STATUS_NODE_MAP[numericStatus];
+  if (FLOW_STATUS_NODE_MAP[harnessStatus]) {
+    return FLOW_STATUS_NODE_MAP[harnessStatus];
   }
 
   const error = new Error('A valid flow node or harnessStatus is required.');

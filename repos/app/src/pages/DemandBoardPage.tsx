@@ -32,7 +32,7 @@ export function DemandBoardPage() {
 
     try {
       const nextGroups = await issueService.listMyHarness({
-        harnessStatusList: workflowHarnessStatuses,
+        phases: workflowHarnessStatuses,
       })
       setGroups(nextGroups ?? defaultHarnessGroups)
       setError(null)

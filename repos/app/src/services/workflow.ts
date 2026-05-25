@@ -9,11 +9,11 @@ export type WorkflowStage = {
 }
 
 export const workflowStages: WorkflowStage[] = [
-  { key: 'product-planning', title: '产品规划', statuses: ['pm', 0, 1, 2, 3] },
-  { key: 'frontend-dev', title: '前端开发', statuses: ['fe', 4] },
-  { key: 'backend-dev', title: '后端开发', statuses: ['be', 5] },
-  { key: 'test-acceptance', title: '测试验收', statuses: ['qa', 6, 7, 8] },
-  { key: 'archive', title: '归档', statuses: ['archive', 9] },
+  { key: 'product-planning', title: '产品规划', statuses: ['pm'] },
+  { key: 'frontend-dev', title: '前端开发', statuses: ['fe'] },
+  { key: 'backend-dev', title: '后端开发', statuses: ['be'] },
+  { key: 'test-acceptance', title: '测试验收', statuses: ['qa'] },
+  { key: 'archive', title: '归档', statuses: ['archive'] },
 ]
 
 export const workflowStageTitles = workflowStages.map((stage) => stage.title)
@@ -21,13 +21,13 @@ export const workflowStageTitles = workflowStages.map((stage) => stage.title)
 export const workflowHarnessStatuses: HarnessStatus[] = ['pm', 'fe', 'be', 'qa', 'archive']
 
 export function getWorkflowStageTitle(issue: Issue) {
-  const harnessStatus = issue.harnessStatus ?? 0
+  const harnessStatus = issue.harnessStatus ?? 'pm'
 
   return getWorkflowStageByHarnessStatus(harnessStatus).title
 }
 
 export function createWorkflowSteps(issue: Issue): FlowStep[] {
-  const currentStageIndex = getWorkflowStageIndex(issue.harnessStatus ?? 0)
+  const currentStageIndex = getWorkflowStageIndex(issue.harnessStatus ?? 'pm')
 
   return workflowStages.map((stage, index) => ({
     sequence: index,
