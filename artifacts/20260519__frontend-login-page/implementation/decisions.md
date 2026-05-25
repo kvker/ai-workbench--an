@@ -9,6 +9,7 @@
 - `http.request` 支持指定 `baseUrl`，并对 devops 的 `BaseResult` 结构进行解包；后续请求自动追加 `token` header。
 - devops 登录接口默认 base URL 为 `http://devops-api.dahuangf.com:8090/devops`，可通过 `VITE_DEVOPS_API_BASE_URL` 覆盖。
 - 已确认登录接口可直接返回用户对象；当前 `http.request` 同时兼容直接对象和 `BaseResult` 包装结构。
+- `http.request` 统一处理 HTTP 401：清理本地登录态，弹出“登录状态已失效”提示，用户点击确认后跳转 `/login`。
 
 ## 来源
 
