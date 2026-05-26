@@ -85,6 +85,39 @@
 - app-server 子进程不会跨 service 重启恢复；再次发送消息时会重新连接 app-server。
 - 真实 thread resume 仍依赖后续把 app-server thread id 纳入标准恢复策略。
 
+### 修复停止输出时 active turn id 不一致
+
+问题现象：
+
+- 用户点击停止正在输出的 AI 对话时，app-server 返回 `expected active turn id ... but found ...`。
+
+原因：
+
+- `realAdapter` 之前直接修改回调闭包中的 `session.activeTurnId`，没有统一通过 `sessionStore.updateSession()` 写入当前 session 状态。
+- `turn/completed`、`error`、`interrupt` 后没有清空 `activeTurnId`，导致后续中断可能复用旧 turn id。
+- 当 app-server 已经推进到另一个 active turn 时，service 仍按旧 turn id 发起 `turn/interrupt`。
+
+处理：
+
+- `turn/start` 响应和 `turn/started` 通知都通过 `updateSession()` 写入 `activeTurnId`。
+- `turn/completed`、`error`、`interrupt` 后统一清空 `activeTurnId` 并恢复 `idle`。
+- 中断遇到 app-server 的 active turn id mismatch 时，从错误消息解析 `found` 的当前 turn id，并用当前 turn id 重试一次 `turn/interrupt`。
+
+### 修复停止输出后消息尾部仍显示游标
+
+问题现象：
+
+- 停止正在输出的 AI 对话后，最后一条 assistant 消息尾部仍显示 `▍`。
+
+原因：
+
+- 前端用 `message.streaming` 渲染流式游标。
+- 中断时 app-server 不一定发送 `message.completed`，因此由 `message.delta` 创建的流式消息不会被完成态消息替换，`streaming` 会一直保留。
+
+处理：
+
+- `toConversationMessages()` 在遇到 `turn.completed`、`turn.interrupted` 或 `error` 时，将所有仍处于 `streaming` 的消息标记为非流式。
+
 ## 涉及文件
 
 - `repos/service/src/routes/codex.js`

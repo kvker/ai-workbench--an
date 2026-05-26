@@ -35,7 +35,7 @@ async function startTurn(session, input) {
     });
 
     if (response?.turn?.id) {
-      session.activeTurnId = response.turn.id;
+      setActiveTurnId(session, response.turn.id);
     }
   } catch (error) {
     appendEvent(session.id, {
@@ -57,19 +57,29 @@ async function resolveApproval() {
 
 async function interrupt(session) {
   const client = clients.get(session.id);
+  let activeTurnId = session.activeTurnId;
 
-  if (client && session.activeTurnId && session.appServerThreadId) {
-    await client.request('turn/interrupt', {
-      threadId: session.appServerThreadId,
-      turnId: session.activeTurnId,
-    });
+  try {
+    if (client && activeTurnId && session.appServerThreadId) {
+      await interruptTurn(client, session.appServerThreadId, activeTurnId);
+    }
+  } catch (error) {
+    const currentTurnId = parseCurrentTurnId(error);
+
+    if (!currentTurnId || !client || !session.appServerThreadId) {
+      throw error;
+    }
+
+    activeTurnId = currentTurnId;
+    await interruptTurn(client, session.appServerThreadId, activeTurnId);
   }
 
   appendEvent(session.id, {
     type: 'turn.interrupted',
+    turnId: activeTurnId,
   });
 
-  return updateSession(session.id, { status: 'idle' });
+  return updateSession(session.id, { activeTurnId: null, status: 'idle' });
 }
 
 async function getOrCreateClient(session) {
@@ -143,7 +153,7 @@ function handleNotification(session, notification) {
   const { method, params } = notification;
 
   if (method === 'turn/started') {
-    session.activeTurnId = params.turn.id;
+    setActiveTurnId(session, params.turn.id);
     appendEvent(session.id, {
       type: 'turn.started',
       turnId: params.turn.id,
@@ -198,7 +208,7 @@ function handleNotification(session, notification) {
       type: 'turn.completed',
       turnId: params.turn.id,
     });
-    updateSession(session.id, { status: 'idle' });
+    updateSession(session.id, { activeTurnId: null, status: 'idle' });
     return;
   }
 
@@ -207,8 +217,25 @@ function handleNotification(session, notification) {
       type: 'error',
       message: params.error?.message || 'Codex app-server error.',
     });
-    updateSession(session.id, { status: 'idle' });
+    updateSession(session.id, { activeTurnId: null, status: 'idle' });
   }
+}
+
+function setActiveTurnId(session, activeTurnId) {
+  updateSession(session.id, { activeTurnId });
+}
+
+async function interruptTurn(client, threadId, turnId) {
+  await client.request('turn/interrupt', {
+    threadId,
+    turnId,
+  });
+}
+
+function parseCurrentTurnId(error) {
+  const match = /expected active turn id [\w-]+ but found ([\w-]+)/i.exec(error.message || '');
+
+  return match?.[1] || null;
 }
 
 function appendCompletedItem(session, item) {

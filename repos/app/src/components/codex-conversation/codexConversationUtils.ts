@@ -48,6 +48,17 @@ export function toConversationMessages(events: CodexConversationEvent[]) {
         messages[existingIndex] = completedMessage
       }
     }
+
+    if (event.type === 'turn.completed' || event.type === 'turn.interrupted' || event.type === 'error') {
+      for (const [index, message] of messages.entries()) {
+        if (message.streaming) {
+          messages[index] = {
+            ...message,
+            streaming: false,
+          }
+        }
+      }
+    }
   }
 
   return messages

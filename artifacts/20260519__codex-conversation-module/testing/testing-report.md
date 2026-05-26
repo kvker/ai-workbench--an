@@ -13,6 +13,9 @@
 | 7 | 真实 app-server 最小闭环 | 通过 | 临时端口 `43101`，`codex-cli 0.128.0`，发送“只回复 pong”，后续 events 返回 `message.delta:pong`、`message.completed:pong`、`turn.completed` |
 | 8 | SSE 真实事件流 | 通过 | 临时端口 `43103`，订阅 `/stream` 后发送“只回复 pong”，SSE 实时收到 `session.connected`、`turn.started`、`message.delta:pong`、`message.completed:pong`、`turn.completed` |
 | 9 | session/events 持久化恢复 | 通过 | 临时端口 `43104` 创建 `persist-demo` session 并产生 7 条事件；重启到 `43105` 后 `GET /api/codex/sessions?demandId=persist-demo&workspaceId=persist-workspace` 仍返回同一 session 与 7 条事件 |
+| 10 | active turn 中断修复语法检查 | 通过 | `node --check src/services/codex/realAdapter.js`、`node --check src/services/codex/service.js` |
+| 11 | service 启动 smoke test | 通过 | `npm start` 可启动并加载现有 19 个 Codex sessions |
+| 12 | 停止输出后游标清理构建检查 | 通过 | `npm run build` |
 
 ## 缺陷记录
 
