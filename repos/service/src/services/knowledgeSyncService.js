@@ -24,8 +24,36 @@ const HARNESS_AGENT_FILE_MAPPINGS = [
   { sourceDirs: ['engineering'], targetPath: ['shared', 'engineering.md'] },
 ];
 
+const MATERIAL_CATEGORIES = ['conventions', 'skills', 'agents'];
+const MATERIAL_MANIFEST = {
+  conventions: [
+    { id: 'pm', role: 'pm', sourceDirs: ROLE_SOURCE_DIRS.pm.conventions },
+    { id: 'fe', role: 'fe', sourceDirs: ROLE_SOURCE_DIRS.fe.conventions },
+    { id: 'be', role: 'be', sourceDirs: ROLE_SOURCE_DIRS.be.conventions },
+    { id: 'qa', role: 'qa', sourceDirs: ROLE_SOURCE_DIRS.qa.conventions },
+    { id: 'shared', sourceDirs: ['shared'] },
+  ],
+  skills: [
+    { id: 'pm', role: 'pm', sourceDirs: ROLE_SOURCE_DIRS.pm.skills },
+    { id: 'fe', role: 'fe', sourceDirs: ROLE_SOURCE_DIRS.fe.skills },
+    { id: 'be', role: 'be', sourceDirs: ROLE_SOURCE_DIRS.be.skills },
+    { id: 'qa', role: 'qa', sourceDirs: ROLE_SOURCE_DIRS.qa.skills },
+    { id: 'shared', sourceDirs: ['shared'] },
+  ],
+  agents: HARNESS_AGENT_FILE_MAPPINGS.map((mapping) => ({
+    id: mapping.targetPath.join('/').replace(/\.md$/, ''),
+    role: resolveAgentRole(mapping.targetPath),
+    sourceDirs: mapping.sourceDirs,
+    targetPath: mapping.targetPath,
+  })),
+};
+
 async function syncKnowledgeForIdentity({ identity, workspacePath, force = true }) {
   return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force }));
+}
+
+async function syncKnowledgeMaterials({ workspacePath, roles, materials, force = true }) {
+  return withKnowledgeSyncLock(workspacePath, () => syncKnowledgeMaterialsUnlocked({ workspacePath, roles, materials, force }));
 }
 
 async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force }) {
@@ -113,6 +141,99 @@ async function syncKnowledgeForIdentityUnlocked({ identity, workspacePath, force
   };
 }
 
+async function syncKnowledgeMaterialsUnlocked({ workspacePath, roles, materials, force }) {
+  if (!workspacePath) {
+    const error = new Error('workspacePath is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedRoles = normalizeRoles(roles);
+
+  if (normalizedRoles.length === 0) {
+    const error = new Error('At least one role is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const materialSelection = normalizeMaterialSelection(materials, normalizedRoles);
+  const knowledgeRootDir = resolveKnowledgeRootDir();
+
+  if (!knowledgeRootDir) {
+    const error = new Error('KNOWLEDGE_ROOT_DIR is not configured.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await assertDirectory(knowledgeRootDir, 'KNOWLEDGE_ROOT_DIR does not exist.');
+  await assertDirectory(workspacePath, 'Workspace does not exist.');
+
+  const targetPaths = resolveTargetPaths(workspacePath);
+
+  if (!force && await hasSyncedKnowledgeFiles(targetPaths, knowledgeRootDir)) {
+    return {
+      status: 'skipped',
+      identity: normalizedRoles[0],
+      roles: normalizedRoles,
+      materials: materialSelection,
+      knowledgeRootDir,
+      workspacePath,
+      copied: [],
+      missing: [],
+      reason: 'knowledge files already exist',
+    };
+  }
+
+  await refreshKnowledgeRoot(knowledgeRootDir);
+
+  const copied = [];
+  const missing = [];
+
+  await replaceDirectory({
+    sourcePath: path.join(knowledgeRootDir, 'background'),
+    targetPath: targetPaths.background,
+    label: 'background',
+    copied,
+    missing,
+  });
+
+  await replaceSelectedDirectories({
+    knowledgeRootDir,
+    category: 'conventions',
+    materialIds: materialSelection.conventions,
+    targetPath: targetPaths.conventions,
+    copied,
+    missing,
+  });
+
+  await replaceSelectedDirectories({
+    knowledgeRootDir,
+    category: 'skills',
+    materialIds: materialSelection.skills,
+    targetPath: targetPaths.skills,
+    copied,
+    missing,
+  });
+
+  await replaceSelectedAgentFiles({
+    knowledgeRootDir,
+    materialIds: materialSelection.agents,
+    targetPath: targetPaths.agents,
+    copied,
+  });
+
+  return {
+    status: missing.length > 0 ? 'partial' : 'synced',
+    identity: normalizedRoles[0],
+    roles: normalizedRoles,
+    materials: materialSelection,
+    knowledgeRootDir,
+    workspacePath,
+    copied,
+    missing,
+  };
+}
+
 async function withKnowledgeSyncLock(workspacePath, task) {
   const lockKey = path.resolve(String(workspacePath || ''));
   const previous = knowledgeSyncLocks.get(lockKey) || Promise.resolve();
@@ -145,6 +266,73 @@ function normalizeIdentity(identity) {
   const error = new Error('Unsupported identity.');
   error.statusCode = 400;
   throw error;
+}
+
+function normalizeRoles(roles) {
+  if (!Array.isArray(roles)) {
+    return [];
+  }
+
+  return [...new Set(roles.map((role) => normalizeIdentity(role)))];
+}
+
+function normalizeMaterialSelection(materials, roles) {
+  const defaultSelection = createDefaultMaterialSelection(roles);
+
+  if (!materials || typeof materials !== 'object') {
+    return defaultSelection;
+  }
+
+  return Object.fromEntries(MATERIAL_CATEGORIES.map((category) => {
+    const allowedIds = new Set(MATERIAL_MANIFEST[category].map((item) => item.id));
+    const selectedIds = Array.isArray(materials[category])
+      ? materials[category].filter((id) => allowedIds.has(String(id)))
+      : defaultSelection[category];
+
+    return [category, [...new Set(selectedIds.map(String))]];
+  }));
+}
+
+function createDefaultMaterialSelection(roles) {
+  const roleSet = new Set(roles);
+
+  return Object.fromEntries(MATERIAL_CATEGORIES.map((category) => [
+    category,
+    MATERIAL_MANIFEST[category]
+      .filter((item) => !item.role || roleSet.has(item.role))
+      .map((item) => item.id),
+  ]));
+}
+
+function listKnowledgeMaterials(roles = []) {
+  const normalizedRoles = normalizeRoles(roles);
+  const defaultSelection = createDefaultMaterialSelection(normalizedRoles);
+
+  return {
+    roles: normalizedRoles,
+    defaultSelection,
+    groups: MATERIAL_CATEGORIES.map((category) => ({
+      category,
+      items: MATERIAL_MANIFEST[category].map((item) => ({
+        id: item.id,
+        role: item.role,
+        sourceDirs: item.sourceDirs,
+        targetPath: item.targetPath,
+        defaultSelected: defaultSelection[category].includes(item.id),
+      })),
+    })),
+  };
+}
+
+function resolveAgentRole(targetPath) {
+  const target = targetPath.join('/');
+
+  if (target === 'pm.md') return 'pm';
+  if (target === 'fe.md') return 'fe';
+  if (target === 'be.md') return 'be';
+  if (target === 'qa.md') return 'qa';
+
+  return undefined;
 }
 
 function createRoleSourceGroup(knowledgeRootDir, category, dirNames) {
@@ -282,6 +470,66 @@ async function replaceHarnessAgentFiles({ knowledgeRootDir, targetPath, copied }
   }
 }
 
+async function replaceSelectedDirectories({ knowledgeRootDir, category, materialIds, targetPath, copied, missing }) {
+  await fs.rm(targetPath, { recursive: true, force: true });
+  await fs.mkdir(targetPath, { recursive: true });
+
+  const itemById = new Map(MATERIAL_MANIFEST[category].map((item) => [item.id, item]));
+
+  for (const materialId of materialIds) {
+    const item = itemById.get(materialId);
+
+    if (!item) {
+      continue;
+    }
+
+    const sourcePaths = resolveSourcePaths(knowledgeRootDir, category, item.sourceDirs);
+    const existingSourcePaths = [];
+
+    for (const sourcePath of sourcePaths) {
+      if (await isDirectory(sourcePath)) {
+        existingSourcePaths.push(sourcePath);
+      }
+    }
+
+    if (existingSourcePaths.length === 0) {
+      missing.push({ label: category, sourcePath: sourcePaths.join(', ') });
+      continue;
+    }
+
+    for (const sourcePath of existingSourcePaths) {
+      await copyDirectoryContents(sourcePath, targetPath);
+      copied.push({ label: category, sourcePath, targetPath });
+    }
+  }
+}
+
+async function replaceSelectedAgentFiles({ knowledgeRootDir, materialIds, targetPath, copied }) {
+  await fs.rm(targetPath, { recursive: true, force: true });
+  await fs.mkdir(targetPath, { recursive: true });
+
+  const itemById = new Map(MATERIAL_MANIFEST.agents.map((item) => [item.id, item]));
+
+  for (const materialId of materialIds) {
+    const item = itemById.get(materialId);
+
+    if (!item) {
+      continue;
+    }
+
+    const sourcePath = await findFirstAgentFile(knowledgeRootDir, item.sourceDirs);
+
+    if (!sourcePath) {
+      continue;
+    }
+
+    const targetFilePath = path.join(targetPath, ...item.targetPath);
+    await fs.mkdir(path.dirname(targetFilePath), { recursive: true });
+    await fs.copyFile(sourcePath, targetFilePath);
+    copied.push({ label: 'agents', sourcePath, targetPath: targetFilePath });
+  }
+}
+
 async function findFirstAgentFile(knowledgeRootDir, sourceDirs) {
   for (const sourceDir of sourceDirs) {
     const sourcePath = path.join(knowledgeRootDir, 'agents', sourceDir, 'AGENTS.md');
@@ -378,8 +626,11 @@ async function isFile(targetPath) {
 
 module.exports = {
   HARNESS_AGENT_FILE_MAPPINGS,
+  MATERIAL_MANIFEST,
   ROLE_SOURCE_DIRS,
+  listKnowledgeMaterials,
   normalizeIdentity,
   replaceHarnessAgentFiles,
   syncKnowledgeForIdentity,
+  syncKnowledgeMaterials,
 };

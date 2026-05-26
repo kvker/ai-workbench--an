@@ -53,12 +53,44 @@ export type OpenDocumentRegionResult = {
 export type UpdateFilesResult = {
   status: 'synced' | 'partial' | 'skipped'
   identity: string
+  roles?: KnowledgeRole[]
+  materials?: KnowledgeMaterialSelection
   knowledgeRootDir: string
   workspacePath: string
   copied?: Array<{ label: string; sourcePath: string; targetPath: string }>
   missing?: Array<{ label: string; sourcePath: string }>
   reason?: string
   workspace?: LocalWorkspace
+}
+
+export type KnowledgeRole = 'pm' | 'fe' | 'be' | 'qa'
+
+export type KnowledgeMaterialCategory = 'conventions' | 'agents' | 'skills'
+
+export type KnowledgeMaterialSelection = Record<KnowledgeMaterialCategory, string[]>
+
+export type KnowledgeMaterialItem = {
+  id: string
+  role?: KnowledgeRole
+  sourceDirs: string[]
+  targetPath?: string[]
+  defaultSelected: boolean
+}
+
+export type KnowledgeMaterialGroup = {
+  category: KnowledgeMaterialCategory
+  items: KnowledgeMaterialItem[]
+}
+
+export type KnowledgeMaterialsResult = {
+  roles: KnowledgeRole[]
+  defaultSelection: KnowledgeMaterialSelection
+  groups: KnowledgeMaterialGroup[]
+}
+
+export type UpdateMaterialsInput = {
+  roles: KnowledgeRole[]
+  materials: KnowledgeMaterialSelection
 }
 
 export type StartPmRawAnalysisResult = {
@@ -145,6 +177,29 @@ export async function updateFiles(issue: Issue) {
   appendIssueParams(params, issue)
 
   return request<UpdateFilesResult>(`/api/task/${issue.id}/files/update?${params.toString()}`, {
+    method: 'POST',
+  })
+}
+
+export async function listKnowledgeMaterials(issue: Issue, roles: KnowledgeRole[] = []) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  if (roles.length > 0) {
+    params.set('roles', roles.join(','))
+  }
+
+  return request<KnowledgeMaterialsResult>(`/api/task/${issue.id}/materials?${params.toString()}`, {
+    method: 'GET',
+  })
+}
+
+export async function updateMaterials(issue: Issue, input: UpdateMaterialsInput) {
+  const params = new URLSearchParams()
+  appendIssueParams(params, issue)
+
+  return request<UpdateFilesResult>(`/api/task/${issue.id}/files/update?${params.toString()}`, {
+    body: input,
     method: 'POST',
   })
 }

@@ -16,6 +16,7 @@ import {
   type UpdateIssueInput,
   type UserBaseInfo,
 } from '../services'
+import type { KnowledgeMaterialSelection, KnowledgeMaterialsResult, KnowledgeRole } from '../services/task'
 import { pageBand, panel } from '../utils/themeClasses'
 import { ArtifactPreviewDialog } from './demand-detail/ArtifactPreviewDialog'
 import { ArtifactRegion } from './demand-detail/ArtifactRegion'
@@ -23,10 +24,17 @@ import { DeployPlanDialog } from './demand-detail/DeployPlanDialog'
 import { DemandInfoRegion } from './demand-detail/DemandInfoRegion'
 import { DetailDialog } from './demand-detail/DetailDialog'
 import { EditIssueDialog } from './demand-detail/EditIssueDialog'
+import { UpdateMaterialsDialog } from './demand-detail/UpdateMaterialsDialog'
 import { WorkflowRegion } from './demand-detail/WorkflowRegion'
 import { createEmptyIssueTask, createIssueBranchName, loadIssueTask } from './demand-detail/demandDetailData'
 
 const DOCUMENT_REGION_BASE_URL = import.meta.env.VITE_DOCUMENT_REGION_BASE_URL ?? 'http://172.16.4.81:8080/'
+const DEFAULT_MATERIAL_ROLES: KnowledgeRole[] = ['pm']
+const EMPTY_MATERIAL_SELECTION: KnowledgeMaterialSelection = {
+  conventions: [],
+  agents: [],
+  skills: [],
+}
 
 type FlowCompletionPromptRequest = {
   key: number
@@ -43,6 +51,8 @@ export function DemandDetailPage() {
   const [isSavingIssue, setIsSavingIssue] = useState(false)
   const [isDeployPlanOpen, setIsDeployPlanOpen] = useState(false)
   const [isCreatingDeployPlan, setIsCreatingDeployPlan] = useState(false)
+  const [isUpdateMaterialsOpen, setIsUpdateMaterialsOpen] = useState(false)
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false)
   const [deletingDeployPlanId, setDeletingDeployPlanId] = useState<number | null>(null)
   const [isLoadingDeployPlans, setIsLoadingDeployPlans] = useState(false)
   const [isLoadingProjects, setIsLoadingProjects] = useState(false)
@@ -51,6 +61,9 @@ export function DemandDetailPage() {
   const [users, setUsers] = useState<UserBaseInfo[]>([])
   const [usersLoading, setUsersLoading] = useState(false)
   const [isUpdatingFiles, setIsUpdatingFiles] = useState(false)
+  const [materialRoles, setMaterialRoles] = useState<KnowledgeRole[]>(DEFAULT_MATERIAL_ROLES)
+  const [materialSelection, setMaterialSelection] = useState<KnowledgeMaterialSelection>(EMPTY_MATERIAL_SELECTION)
+  const [knowledgeMaterials, setKnowledgeMaterials] = useState<KnowledgeMaterialsResult | null>(null)
   const [previewDocument, setPreviewDocument] = useState<DocumentSummary | null>(null)
   const [previewContent, setPreviewContent] = useState('')
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
@@ -197,22 +210,56 @@ export function DemandDetailPage() {
     }
   }
 
+  const loadKnowledgeMaterials = useCallback(async (roles: KnowledgeRole[]) => {
+    if (!issue.id || roles.length === 0) {
+      setKnowledgeMaterials(null)
+      setMaterialSelection(EMPTY_MATERIAL_SELECTION)
+      return
+    }
+
+    setIsLoadingMaterials(true)
+
+    try {
+      const result = await taskService.listKnowledgeMaterials(issue, roles)
+      setKnowledgeMaterials(result)
+      setMaterialSelection(result.defaultSelection)
+    } catch (materialError) {
+      messageApi.error(materialError instanceof Error ? materialError.message : '物料列表加载失败')
+    } finally {
+      setIsLoadingMaterials(false)
+    }
+  }, [issue, messageApi])
+
+  const openUpdateMaterials = () => {
+    setIsUpdateMaterialsOpen(true)
+    void loadKnowledgeMaterials(materialRoles)
+  }
+
+  const changeMaterialRoles = (roles: KnowledgeRole[]) => {
+    setMaterialRoles(roles)
+    void loadKnowledgeMaterials(roles)
+  }
+
   const updateFiles = async () => {
     setIsUpdatingFiles(true)
 
     try {
-      const result = await taskService.updateFiles(issue)
+      const result = await taskService.updateMaterials(issue, {
+        roles: materialRoles,
+        materials: materialSelection,
+      })
       const missingCount = result.missing?.length ?? 0
 
       if (missingCount > 0) {
-        messageApi.warning(`文件已部分更新，${missingCount} 类来源缺失`)
+        messageApi.warning(`物料已部分更新，${missingCount} 类来源缺失`)
       } else {
-        messageApi.success('文件已更新')
+        messageApi.success('物料已更新')
       }
 
+      setIsUpdateMaterialsOpen(false)
       setReloadKey((value) => value + 1)
     } catch (updateError) {
-      messageApi.error(updateError instanceof Error ? updateError.message : '更新文件失败')
+      messageApi.error(updateError instanceof Error ? updateError.message : '更新物料失败')
     } finally {
       setIsUpdatingFiles(false)
     }
@@ -326,7 +373,19 @@ export function DemandDetailPage() {
           onOpenDetail={() => setIsDetailOpen(true)}
           onOpenDocumentRegion={openDocumentRegion}
           onOpenDeployPlans={openDeployPlans}
-          onUpdateFiles={updateFiles}
+          onUpdateFiles={openUpdateMaterials}
+        />
+        <UpdateMaterialsDialog
+          groups={knowledgeMaterials?.groups ?? []}
+          loading={isLoadingMaterials}
+          open={isUpdateMaterialsOpen}
+          roles={materialRoles}
+          selection={materialSelection}
+          submitting={isUpdatingFiles}
+          onClose={() => setIsUpdateMaterialsOpen(false)}
+          onRolesChange={changeMaterialRoles}
+          onSelectionChange={setMaterialSelection}
+          onSubmit={updateFiles}
         />
         <WorkflowRegion
           currentFlowStepIndex={currentFlowStepIndex}

@@ -112,6 +112,7 @@
 | [20260522__document-region-new-tab](artifacts/20260522__document-region-new-tab/) | 打开文档区改为前端新标签打开 Web 文档区 | 已完成 |
 | [20260522__update-files-sync](artifacts/20260522__update-files-sync/) | 将更新代码改为更新文件并调整 Harness 文件同步策略 | 活跃 |
 | [20260522__deploy-plan-modal](artifacts/20260522__deploy-plan-modal/) | 详情页增加发布计划弹框并通过发布计划接口创建分支 | 已完成 |
+| [20260525__detail-update-materials](artifacts/20260525__detail-update-materials/) | 详情页将更新文件改为可视化选择角色和物料后更新 | 活跃 |
 
 ## Skill 路由
 

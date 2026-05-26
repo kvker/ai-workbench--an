@@ -50,7 +50,7 @@ export function DemandInfoRegion({
             打开文档区
           </Button>
           <Button size="small" icon={<CloudSyncOutlined />} loading={isUpdatingFiles} onClick={onUpdateFiles} className="text-xs font-extrabold">
-            更新文件
+            更新物料
           </Button>
           <Button size="small" icon={<RocketOutlined />} onClick={onOpenDeployPlans} className="text-xs font-extrabold">
             发布计划

@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { promisify } = require('node:util');
-const { syncKnowledgeForIdentity } = require('../services/knowledgeSyncService');
+const { listKnowledgeMaterials, syncKnowledgeForIdentity, syncKnowledgeMaterials } = require('../services/knowledgeSyncService');
 const { startPmRawAnalysis } = require('../services/pmRawAnalysisService');
 const { prepareDeployPlanRepositories } = require('../services/deployPlanRepositoryService');
 const { ensureDemandWorkspace, resolveWorkspaceUserId } = require('../services/workspaceService');
@@ -160,16 +160,37 @@ router.post('/:issueId/document-region/open', async (req, res, next) => {
 router.post('/:issueId/files/update', async (req, res, next) => {
   try {
     const workspace = await prepareIssueWorkspace(req, { syncKnowledge: false });
-    const result = await syncKnowledgeForIdentity({
-      identity: 'pm',
-      workspacePath: workspace.workspacePath,
-      force: true,
-    });
+    const roles = req.body?.roles;
+    const result = Array.isArray(roles) && roles.length > 0
+      ? await syncKnowledgeMaterials({
+        roles,
+        materials: req.body?.materials,
+        workspacePath: workspace.workspacePath,
+        force: true,
+      })
+      : await syncKnowledgeForIdentity({
+        identity: 'pm',
+        workspacePath: workspace.workspacePath,
+        force: true,
+      });
 
     res.json({
       ...result,
       workspace: toWorkspaceResponse(workspace),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:issueId/materials', async (req, res, next) => {
+  try {
+    const roles = String(req.query.roles || '')
+      .split(',')
+      .map((role) => role.trim())
+      .filter(Boolean);
+
+    res.json(listKnowledgeMaterials(roles));
   } catch (error) {
     next(error);
   }
