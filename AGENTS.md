@@ -36,6 +36,12 @@
 |------|------|
 | 设计稿 | 无，有参考代码 |
 | API 文档 | 无 |
+| Codex app-server 文档 | https://developers.openai.com/codex/app-server |
+
+### OpenAI/Codex 文档约定
+
+- 调整 `repos/service` Codex app-server adapter 或 `repos/app` 对话区时，优先参考 [Codex app-server 文档](https://developers.openai.com/codex/app-server)。
+- 涉及 OpenAI/Codex 官方接口、事件结构、`turn/start`、slash 或 `$` 调用时，必须使用 `openai-docs` 技能或官方 OpenAI 文档核对最新行为。
 
 ## 工作流阶段
 
@@ -113,6 +119,7 @@
 | [20260522__update-files-sync](artifacts/20260522__update-files-sync/) | 将更新代码改为更新文件并调整 Harness 文件同步策略 | 活跃 |
 | [20260522__deploy-plan-modal](artifacts/20260522__deploy-plan-modal/) | 详情页增加发布计划弹框并通过发布计划接口创建分支 | 已完成 |
 | [20260525__detail-update-materials](artifacts/20260525__detail-update-materials/) | 详情页将更新文件改为可视化选择角色和物料后更新 | 活跃 |
+| [20260527__codex-app-server-dialog](artifacts/20260527__codex-app-server-dialog/) | 根据 Codex app-server 文档完善对话框 slash、`$` 调用和气泡兼容 | 活跃 |
 
 ## Skill 路由
 
