@@ -120,6 +120,7 @@
 | [20260522__deploy-plan-modal](artifacts/20260522__deploy-plan-modal/) | 详情页增加发布计划弹框并通过发布计划接口创建分支 | 已完成 |
 | [20260525__detail-update-materials](artifacts/20260525__detail-update-materials/) | 详情页将更新文件改为可视化选择角色和物料后更新 | 活跃 |
 | [20260527__codex-app-server-dialog](artifacts/20260527__codex-app-server-dialog/) | 根据 Codex app-server 文档完善对话框 slash、`$` 调用和气泡兼容 | 活跃 |
+| [20260527__codex-agent-toml-sync](artifacts/20260527__codex-agent-toml-sync/) | 将 Harness Markdown 自定义代理转换为 Codex `.codex/agents/*.toml` | 活跃 |
 
 ## Skill 路由
 
