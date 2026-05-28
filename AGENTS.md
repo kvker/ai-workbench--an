@@ -122,6 +122,7 @@
 | [20260527__codex-app-server-dialog](artifacts/20260527__codex-app-server-dialog/) | 根据 Codex app-server 文档完善对话框 slash、`$` 调用和气泡兼容 | 活跃 |
 | [20260527__codex-agent-toml-sync](artifacts/20260527__codex-agent-toml-sync/) | 将 Harness Markdown 自定义代理转换为 Codex `.codex/agents/*.toml` | 活跃 |
 | [20260527__codex-file-change-render](artifacts/20260527__codex-file-change-render/) | 修复 Codex 对话中文件变更重复气泡与 diff Markdown 误渲染 | 活跃 |
+| [20260528__artifact-region-markdown-list](artifacts/20260528__artifact-region-markdown-list/) | 修复产物区按 artifacts 目录展示 Markdown 且排除 AGENTS.md | 活跃 |
 
 ## Skill 路由
 
