@@ -124,6 +124,7 @@
 | [20260527__codex-file-change-render](artifacts/20260527__codex-file-change-render/) | 修复 Codex 对话中文件变更重复气泡与 diff Markdown 误渲染 | 活跃 |
 | [20260528__artifact-region-markdown-list](artifacts/20260528__artifact-region-markdown-list/) | 修复产物区按 artifacts 目录展示 Markdown 且排除 AGENTS.md | 活跃 |
 | [20260528__codex-paste-file-upload](artifacts/20260528__codex-paste-file-upload/) | AI 会话框支持粘贴文件上传到工作区 tmp 目录 | 活跃 |
+| [20260529__codex-chat-file-picker](artifacts/20260529__codex-chat-file-picker/) | AI 会话输入区支持批量选择文件与文件夹上传 | 活跃 |
 
 ## Skill 路由
 
