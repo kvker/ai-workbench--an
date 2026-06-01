@@ -126,6 +126,7 @@
 | [20260528__codex-paste-file-upload](artifacts/20260528__codex-paste-file-upload/) | AI 会话框支持粘贴文件上传到工作区 tmp 目录 | 活跃 |
 | [20260529__codex-chat-file-picker](artifacts/20260529__codex-chat-file-picker/) | AI 会话输入区支持批量选择文件与文件夹上传 | 活跃 |
 | [20260529__detail-react-auto-flow](artifacts/20260529__detail-react-auto-flow/) | 详情页流程区新增 ReAct AI 一键自动执行入口 | 活跃 |
+| [20260601__service-harness-pull-webhook](artifacts/20260601__service-harness-pull-webhook/) | service 增加 webhook 触发 harness main 拉取 | 活跃 |
 
 ## Skill 路由
 
