@@ -6,6 +6,13 @@
 |------|----------|------|
 | 需求页 | `repos/app/src/pages/DemandBoardPage.tsx` | 展示需求列表、筛选入口和创建需求入口。 |
 | 详情页 | `repos/app/src/pages/DemandDetailPage.tsx` | 单个需求的执行空间，绑定路由参数中的需求 id。 |
+| 报表页 | `repos/app/src/App.tsx` | 当前为空白占位页，绑定 `/reports` 路由。 |
+
+## 工作台区域
+
+| 名词 | 代码组件 | 位置 | 说明 |
+|------|----------|------|------|
+| 侧边菜单 | `WorkbenchSidebar` | `repos/app/src/App.tsx` | 工作台左侧主导航，包含报表与需求入口。 |
 
 ## 详情页区域
 
