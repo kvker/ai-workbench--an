@@ -140,11 +140,6 @@
 | 评价任务是否真的完成 | `/an-eval` |
 | 归档已完成的任务产出 | `/an-archive` |
 
-当用户描述开发意图（如"我要做一个XXX"、"添加XXX"、"修复XXX"、"重构XXX"等）时，
-先询问用户是否使用 `/an-task` 标准工作流推进，提供以下选项：
+当用户描述开发意图（如"我要做一个XXX"、"添加XXX"、"修复XXX"、"重构XXX"等）时，触发 `/an-task`。
 
-1. 完整流程（raw-input → requirements → design → tech-spec → implementation → testing → deployment）
-2. 快速修复（直接 implementation）
-3. 自由对话（不使用工作流）
-
-不要自动启动工作流。
+入口文件只负责路由，不规定具体流程轻重。触发 `/an-task` 后，由技能根据 [flow-policy](conventions/flow-policy.md) 自主判断 L0/L1/L2/L3 并推进；只有需求目标不明确、验收标准无法自洽、涉及高风险边界、需要破坏性操作或外部授权时，才暂停向用户确认。
