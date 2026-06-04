@@ -53,6 +53,8 @@ node .agents/skills/an-recipes/scripts/detect-recipes.mjs --root repos --write .
 
 实现后选择最小但有意义的命令进行验证。跨工程改动需要分别选择受影响工程的命令。
 
+验证默认只运行一次性命令（如 build、lint、typecheck、test）。不要主动启动项目工程或本地服务；需要运行态验证时，默认使用用户已经启动的服务，除非用户本轮明确要求启动。
+
 ## 任务质量评价
 
 L2/L3 任务完成测试后运行：
