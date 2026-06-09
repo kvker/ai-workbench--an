@@ -127,6 +127,7 @@
 | [20260529__codex-chat-file-picker](artifacts/20260529__codex-chat-file-picker/) | AI 会话输入区支持批量选择文件与文件夹上传 | 活跃 |
 | [20260529__detail-react-auto-flow](artifacts/20260529__detail-react-auto-flow/) | 详情页流程区新增 ReAct AI 一键自动执行入口 | 活跃 |
 | [20260601__service-harness-pull-webhook](artifacts/20260601__service-harness-pull-webhook/) | service 增加 webhook 触发 harness main 拉取 | 活跃 |
+| [20260609__codex-edit-turn-fork](artifacts/20260609__codex-edit-turn-fork/) | Codex 对话支持编辑旧用户轮次并分叉新会话 | 活跃 |
 
 ## Skill 路由
 
