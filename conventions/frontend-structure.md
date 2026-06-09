@@ -6,6 +6,7 @@
 |------|----------|------|
 | 需求页 | `repos/app/src/pages/DemandBoardPage.tsx` | 展示需求列表、筛选入口和创建需求入口。 |
 | 详情页 | `repos/app/src/pages/DemandDetailPage.tsx` | 单个需求的执行空间，绑定路由参数中的需求 id。 |
+| DB页 | `repos/app/src/pages/DbPage.tsx` | 独立 SQL 生成器页面，复用 Codex 对话区，可选择 `background/db/*` 下一级扁平物料文件夹。 |
 | 报表页 | `repos/app/src/App.tsx` | 当前为空白占位页，绑定 `/reports` 路由。 |
 
 ## 工作台区域
@@ -31,6 +32,7 @@
 ```ts
 // Page: 需求页
 // Page: 详情页
+// Page: DB页
 // Region: 信息区
 // Region: 流程区
 // Region: 产物区
@@ -50,3 +52,4 @@
 | 日期 | 更新内容 | 触发来源 |
 |------|---------|---------|
 | 2026-05-20 | 补充页面区域内交互控件优先使用 antd、Tailwind CSS 仅辅助样式的维护要求。 | an-refresh / 用户指令 |
+| 2026-06-09 | 补充 DB 页入口与 `background/db/*` 扁平物料选择说明。 | DB SQL 生成器任务 |
