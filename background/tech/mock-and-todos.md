@@ -27,6 +27,7 @@
 | vscode-server 代码页入口 | 对话区 command/diff 事件目前只在工作台内轻量展示，尚未联动代码页 | 完整终端、diff、文件编辑能力不应在对话区重复实现 | 后续由 service 提供当前需求 workspace 的 vscode-server URL/deep link，对话区只展示摘要并跳转代码页 | 待接入 |
 | service 调 devops 地址默认值 | `repos/service/src/services/deployPlanRepositoryService.js` 在未配置 `DEVOPS_API_BASE_URL` 时默认请求 `http://devops-api.dahuangf.com:8090/devops` | service 查询工程配置以获取 `codeRepository` | 正式环境通过部署配置注入 devops API 地址 | 临时默认值 |
 | 发布计划 Git SSH 地址转换默认值 | `repos/service/src/services/deployPlanRepositoryService.js` 默认将 `https://git.dahuangf.com/...` 转为 `ssh://git@git.dahuangf.com:10022/...` | 发布计划仓库 clone / pull 使用 SSH key，避免 https 账密输入 | 正式环境可通过 `DEPLOY_PLAN_GIT_SSH_HOST`、`DEPLOY_PLAN_GIT_SSH_PORT` 配置 Git SSH 地址规则 | 临时默认值 |
+| 纯 Chat 接口 OpenAI 配置 | `repos/service/src/services/aiChatService.js` 新增 `/api/ai/chat`，调用方定义 prompt、结构化输出和 JSON schema；通过 `OPENAI_BASE_URL` 指定 OpenAI-compatible `/v1` 地址，通过 `OPENAI_API_KEY` 指定 key；未传 `model` 且未配置 `OPENAI_CHAT_MODEL` 时临时使用 `gpt-5.5` | 前端门禁判定等一次性 AI 调用；service 不保存会话、不绑定业务语义 | 正式环境通过部署配置指定 `OPENAI_BASE_URL`、`OPENAI_API_KEY` 和 `OPENAI_CHAT_MODEL`，并按成本、延迟和结构化输出要求选择模型 | 临时默认值 |
 
 ## 已知注意事项
 
