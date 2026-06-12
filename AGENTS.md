@@ -132,6 +132,7 @@
 | [20260609__codex-edit-turn-fork](artifacts/20260609__codex-edit-turn-fork/) | Codex 对话支持编辑旧用户轮次并分叉新会话 | 活跃 |
 | [20260609__codex-session-archive](artifacts/20260609__codex-session-archive/) | Codex 历史会话支持显式改名、归档和恢复 | 活跃 |
 | [20260609__db-sql-generator](artifacts/20260609__db-sql-generator/) | 新增 DB 菜单和 SQL 生成器，复用 Codex 对话 UI 并选择 `background/db/*` 扁平物料 | 活跃 |
+| [20260612__db-ops-workspace-sync](artifacts/20260612__db-ops-workspace-sync/) | DB 菜单按用户同步已选 Harness `background/ops/db` 物料到本地 `workspaces-ops-db` | 活跃 |
 
 ## Skill 路由
 
