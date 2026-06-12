@@ -15,6 +15,7 @@ DB 菜单需要以 Harness `background/ops/db` 为物料来源。用户进入或
 - [x] AC7: DB 右侧 Codex 对话区使用当前用户 `workspaces-ops-db/{user}/` 作为会话工作目录，能读取勾选后同步的新物料。
 - [x] AC8: 勾选变化触发的 DB 工作区同步使用 3 秒防抖，只同步最后一次选择。
 - [x] AC9: 刷新页面后，根据当前用户 `workspaces-ops-db/{user}/` 目录下已有物料文件夹反向恢复勾选状态。
+- [x] AC10: 同一用户并发调用 DB 工作区同步接口时不会因目录已存在产生 `EEXIST`。
 
 ## 范围
 

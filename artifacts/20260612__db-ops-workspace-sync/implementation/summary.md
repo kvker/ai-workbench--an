@@ -7,6 +7,7 @@
   - `listDbMaterials()` 返回当前用户 DB 工作区路径和已存在的物料文件夹 ID。
   - 新增 `syncDbWorkspace()`，按用户清洗后的目录名同步已选物料到根工作区 `workspaces-ops-db/{user}/`。
   - 同步策略为先清空用户 DB 工作区，再复制当前已选物料目录，避免取消勾选后保留旧物料。
+  - 同一用户同步请求串行执行，避免刷新或重复请求时并发删建目录触发 `EEXIST`。
 - `repos/service/src/routes/db.js`
   - 新增 `POST /api/db/workspace/sync`。
 - `repos/service/src/services/workspaceService.js`
@@ -29,3 +30,4 @@
 - 用户目录名复用需求工作区已有的 `x-workspace-user` 清洗逻辑。
 - 同步目标目录整体替换为当前选择集合，保证刷新和取消勾选后的文件状态可预期。
 - DB Codex 会话的 `workspaceId` 加入 `workspacePath`，避免复用旧的默认 DB 会话池导致 cwd 仍指向默认工作区。
+- 同一用户的同步请求使用内存队列串行化；不同用户之间仍可并行同步。

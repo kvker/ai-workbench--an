@@ -17,7 +17,7 @@
 
 ## Evidence
 
-- Acceptance criteria: 9/9 closed
+- Acceptance criteria: 10/10 closed
 - Test commands detected: 5
 - Test failure signals: 0
 - Tech-spec change rows: 3
