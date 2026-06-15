@@ -133,6 +133,7 @@
 | [20260609__codex-session-archive](artifacts/20260609__codex-session-archive/) | Codex 历史会话支持显式改名、归档和恢复 | 活跃 |
 | [20260609__db-sql-generator](artifacts/20260609__db-sql-generator/) | 新增 DB 菜单和 SQL 生成器，复用 Codex 对话 UI 并选择 `background/db/*` 扁平物料 | 活跃 |
 | [20260612__db-ops-workspace-sync](artifacts/20260612__db-ops-workspace-sync/) | DB 菜单按用户同步已选 Harness `background/ops/db` 物料到本地 `workspaces-ops-db` | 活跃 |
+| [20260615__sso-login-integration](artifacts/20260615__sso-login-integration/) | 弃用前端账号密码登录页并接入 SSO 回调登录 | 已完成 |
 
 ## Skill 路由
 
