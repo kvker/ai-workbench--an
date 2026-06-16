@@ -7,13 +7,13 @@
 | 需求页 | `repos/app/src/pages/DemandBoardPage.tsx` | 展示需求列表、筛选入口和创建需求入口。 |
 | 详情页 | `repos/app/src/pages/DemandDetailPage.tsx` | 单个需求的执行空间，绑定路由参数中的需求 id。 |
 | DB页 | `repos/app/src/pages/DbPage.tsx` | 独立 SQL 生成器页面，复用 Codex 对话区，可选择 `background/db/*` 下一级扁平物料文件夹。 |
-| 报表页 | `repos/app/src/App.tsx` | 当前为空白占位页，绑定 `/reports` 路由。 |
+| 报表页 | `repos/app/src/pages/ReportsPage.tsx` | 绑定 `/reports` 路由，内部切换使用看板和效能看板；`EfficiencyPage` 作为效能看板内容组件复用。 |
 
 ## 工作台区域
 
 | 名词 | 代码组件 | 位置 | 说明 |
 |------|----------|------|------|
-| 侧边菜单 | `WorkbenchSidebar` | `repos/app/src/App.tsx` | 工作台左侧主导航，包含报表与需求入口。 |
+| 侧边菜单 | `WorkbenchSidebar` | `repos/app/src/App.tsx` | 工作台左侧主导航，包含报表、DB 与需求入口。 |
 
 ## 详情页区域
 
@@ -33,6 +33,7 @@
 // Page: 需求页
 // Page: 详情页
 // Page: DB页
+// Page: 报表页
 // Region: 信息区
 // Region: 流程区
 // Region: 产物区
@@ -53,3 +54,5 @@
 |------|---------|---------|
 | 2026-05-20 | 补充页面区域内交互控件优先使用 antd、Tailwind CSS 仅辅助样式的维护要求。 | an-refresh / 用户指令 |
 | 2026-06-09 | 补充 DB 页入口与 `background/db/*` 扁平物料选择说明。 | DB SQL 生成器任务 |
+| 2026-06-16 | 补充效能页入口，并修正报表页代码入口说明。 | 效能看板任务 |
+| 2026-06-16 | 合并报表与效能入口，效能看板改为报表页内部视图。 | reports/efficiency 合并任务 |
