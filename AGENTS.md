@@ -136,6 +136,7 @@
 | [20260615__sso-login-integration](artifacts/20260615__sso-login-integration/) | 弃用前端账号密码登录页并接入 SSO 回调登录 | 已完成 |
 | [20260616__sso-devops-mobile-login](artifacts/20260616__sso-devops-mobile-login/) | SSO 回调后按手机号调用远程 DevOps 登录接口 | 已完成 |
 | [20260616__efficiency-dashboard](artifacts/20260616__efficiency-dashboard/) | 新增效能看板菜单并展示归档周期、访谈基线提效对比和明细 | 活跃 |
+| [20260622__service-dingtalk-notification](artifacts/20260622__service-dingtalk-notification/) | service 新增钉钉企业机器人消息发送抽象与手机号发送入口 | 活跃 |
 
 ## Skill 路由
 
